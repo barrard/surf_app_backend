@@ -4,7 +4,6 @@ module.exports = {
   getWaveData
 }
 
-
-function getWaveData(lat,lng){
-  waveDataService.getWaveData(lat, lng)
+function getWaveData (lat, lng) {
+  return waveDataService.getWaveData(lat, lng)
 }
