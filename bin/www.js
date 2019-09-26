@@ -5,6 +5,7 @@
  * Module dependencies.
  */
 require('dotenv').config()
+const log = require('../utils/logger.js')
 
 var app = require('../app')
 var debug = require('debug')('surf-app-server:server')
@@ -89,5 +90,5 @@ function onListening () {
     ? 'pipe ' + addr
     : 'port ' + addr.port
   debug('Listening on ' + bind)
-  logger.log('Listening on ' + bind)
+  log('Listening on ' + bind)
 }
