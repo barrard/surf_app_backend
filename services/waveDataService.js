@@ -31,8 +31,8 @@ function getWaveData (lat, lng) {
 /* Get master list */
 async function get_nearby_stations ({ lat1, lng1 }) {
   log('getting station list')
-  const distance = 250
-  const url = `https://www.ndbc.noaa.gov/radial_search.php?lat1=${lat1}&lon1=${lng1}&uom=E&dist=${distance}&time=2`
+  const distance = 450
+  const url = `https://www.ndbc.noaa.gov/radial_search.php?lat1=${lat1}&lon1=${lng1}&uom=E&dist=${distance}&time=20`
   log({ url })
   var station_list_html = await rp(url)
   // await fs.writeFile('./station_list.xml', station_list_html)

@@ -6,7 +6,7 @@ const path = require('path')
 const cookieParser = require('cookie-parser')
 const loger = require('morgan')
 const session = require('express-session')
-// 1 - importing dependencies
+
 const passport = require('passport')
 const cors = require('cors')
 const origin_whitelist = [
