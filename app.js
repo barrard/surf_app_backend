@@ -10,7 +10,7 @@ const session = require('express-session')
 const passport = require('passport')
 const cors = require('cors')
 const origin_whitelist = [
-  'http://localhost:3000', 'https://waves.dakine.website'
+  'http://localhost:3000', 'https://waves.dakine.website', 'https://waves.raveaboutdave.com'
 ]
 const corsMiddleware = cors({
   origin: (origin, callback) => {
