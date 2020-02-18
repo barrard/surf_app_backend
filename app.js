@@ -14,6 +14,7 @@ const origin_whitelist = [
 ]
 const corsMiddleware = cors({
   origin: (origin, callback) => {
+    console.log({origin, origin_whitelist})
     if (origin_whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
