@@ -14,11 +14,10 @@ const origin_whitelist = [
 ]
 const corsMiddleware = cors({
   origin: (origin, callback) => {
-    log({origin, origin_whitelist})
     if (origin_whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
-      logger.log({origin})
+      log({origin, origin_whitelist})
       callback(new Error('Not allowed by CORS'))
     }
   },

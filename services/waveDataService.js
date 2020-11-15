@@ -12,7 +12,7 @@ module.exports = {
 function convertGPS (_lat, _lng) {
   let lat = parseFloat(_lat)
   let lng = parseFloat(_lng)
-  log({ lat, lng })
+  // log({ lat, lng })
   if (lat > 0) lat = `${lat}N`
   else lat = `${lat * -1}S`
   if (lng > 0) lng = `${lng}E`
@@ -20,7 +20,7 @@ function convertGPS (_lat, _lng) {
   return { lat1: lat, lng1: lng }
 }
 function getWaveData (lat, lng) {
-  log('getWaveData')
+  // log('getWaveData')
   const latLng = convertGPS(lat, lng)
   // const latLng = { lat1: "23.558N", lng1: "153.900W" };
   log(latLng)

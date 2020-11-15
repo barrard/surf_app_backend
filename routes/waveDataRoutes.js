@@ -13,7 +13,7 @@ router.get('/', function (req, res, next) {
 
 /* GET bouy data for given lat lng. */
 router.get('/lat/:lat/lng/:lng', async (req, res, next) => {
-  log(req.params)
+  // log(req.params)
   const { lat, lng } = req.params
   const data = await waveDataController.getWaveData(lat, lng)
   res.send(data)
