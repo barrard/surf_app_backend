@@ -1,5 +1,5 @@
 require('dotenv').config()
-require('./utils/logger.js')
+let log = require('./utils/logger.js')
 const express = require('express')
 const app = express()
 const path = require('path')
@@ -14,10 +14,11 @@ const origin_whitelist = [
 ]
 const corsMiddleware = cors({
   origin: (origin, callback) => {
-    console.log({origin, origin_whitelist})
+    log({origin, origin_whitelist})
     if (origin_whitelist.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
+      logger.log({origin})
       callback(new Error('Not allowed by CORS'))
     }
   },
@@ -31,6 +32,11 @@ const indexRouter = require('./routes/indexRoutes')
 const usersRouter = require('./routes/usersRoutes')
 const waveDataRouter = require('./routes/waveDataRoutes')
 
+app.use((req, res, next)=>{
+  log()
+  log(`${new Date().toLocaleString()} IP: ${req.ip} - ${req.url}`)
+  next()
+})
 app.use(loger('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
