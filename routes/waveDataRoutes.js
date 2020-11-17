@@ -33,6 +33,8 @@ try {
     console.log(req.headers)
     console.log(`cookies`)
     console.log(req.cookies)
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
     if(!req.cookies){
       console.log('this one no cookies')
       next()
@@ -53,7 +55,7 @@ try {
     // userVisits++
 
     // places+=`| lat:${lat}, lng:${lng} | `
-    res.cookie('places',JSON.stringify(places), { maxAge: new Date().getTime()+1000*60*60*24*700 , httpOnly: true, secure:true, SameSite: 'None'  });
+    res.cookie('places',JSON.stringify(places), { maxAge: new Date().getTime()+1000*60*60*24*700 , httpOnly: true, secure:false, SameSite: 'None'  });
     // res.cookie('userVisits',userVisits, { maxAge: new Date().getTime()*100000, httpOnly: true });
 
     
