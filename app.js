@@ -44,9 +44,7 @@ app.use(cookieParser())
 
 app.use(express.static(path.join(__dirname, 'public')))
 
-app.get('/test', (req, res)=>{
-  console.log(req.ip)
-})
+
 app.use('/', indexRouter)
 app.use('/users', usersRouter)
 app.use('/wavedata', waveDataRouter)

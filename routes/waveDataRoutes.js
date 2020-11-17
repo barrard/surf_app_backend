@@ -16,7 +16,6 @@ router.get('/lat/:lat/lng/:lng', async (req, res, next) => {
   // log(req.params)
   const { lat, lng } = req.params
   addUserHistory(req, res)
-  console.log(req)
   const data = await waveDataController.getWaveData(lat, lng)
   res.send(data)
 })
