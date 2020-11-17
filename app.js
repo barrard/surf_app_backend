@@ -25,7 +25,7 @@ const corsMiddleware = cors({
   preflightContinue: false
 })
 
-
+app.set("trust proxy", "loopback");
 app.use(corsMiddleware)
 // app.options(corsMiddleware)
 
