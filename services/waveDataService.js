@@ -24,6 +24,7 @@ function getWaveData (lat, lng) {
   const latLng = convertGPS(lat, lng)
   // const latLng = { lat1: "23.558N", lng1: "153.900W" };
   log(latLng)
+  return []
 
   return get_nearby_stations(latLng) // {lat1:'23.558N' ,  lng1:'153.900W' }
 }

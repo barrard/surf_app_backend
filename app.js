@@ -10,7 +10,7 @@ const session = require('express-session')
 const passport = require('passport')
 const cors = require('cors')
 const origin_whitelist = [
-  'http://localhost:3000','https://surfbuoys.com', 'https://waves.dakine.website', 'https://waves.raveaboutdave.com'
+  'http://192.168.0.215:3000', 'http://localhost:3000','https://surfbuoys.com', 'https://waves.dakine.website', 'https://waves.raveaboutdave.com'
 ]
 const corsMiddleware = cors({
   origin: (origin, callback) => {
@@ -24,24 +24,29 @@ const corsMiddleware = cors({
   credentials: true,
   preflightContinue: false
 })
+
+
 app.use(corsMiddleware)
-app.options(corsMiddleware)
+// app.options(corsMiddleware)
 
 const indexRouter = require('./routes/indexRoutes')
 const usersRouter = require('./routes/usersRoutes')
 const waveDataRouter = require('./routes/waveDataRoutes')
 
-app.use((req, res, next)=>{
-  log()
-  log(`${new Date().toLocaleString()} IP: ${req.ip} - ${req.url}`)
-  next()
-})
+
 app.use(loger('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
+
+
+
+
 app.use(express.static(path.join(__dirname, 'public')))
 
+app.get('/test', (req, res)=>{
+  console.log(req.ip)
+})
 app.use('/', indexRouter)
 app.use('/users', usersRouter)
 app.use('/wavedata', waveDataRouter)
