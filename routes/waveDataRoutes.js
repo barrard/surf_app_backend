@@ -30,34 +30,23 @@ try {
   lat = parseFloat(lat).toFixed(3)
   lng = parseFloat(lng).toFixed(3)
     console.log(req.ip)
-    console.log(req.headers)
-    console.log(`cookies`)
-    console.log(req.cookies)
+
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 
     if(!req.cookies){
       console.log('this one no cookies')
-      next()
+      return
     }
-    // var userVisits = req.cookies.userVisits;
     var places = req.cookies.places;
-    // console.log(req.cookies)
   
-    console.log({ places})
     if(!places)places=JSON.stringify({})
-    console.log({places})
+
     places=JSON.parse(places)
 
-    console.log({places})
     if(!places[`${lat},${lng}`])places[`${lat},${lng}`]=0
     places[`${lat},${lng}`]++
-    // if(!userVisits)userVisits = 0
-    // userVisits++
-
-    // places+=`| lat:${lat}, lng:${lng} | `
+    console.log(places)
     res.cookie('places',JSON.stringify(places), { maxAge: new Date().getTime()+1000*60*60*24*700 , httpOnly: true, secure:true, sameSite: 'None'  });
-    // res.cookie('userVisits',userVisits, { maxAge: new Date().getTime()*100000, httpOnly: true });
-
     
 } catch (err) {
   console.log({err})
