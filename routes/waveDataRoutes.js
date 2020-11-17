@@ -31,7 +31,8 @@ try {
   lng = parseFloat(lng).toFixed(3)
     console.log(req.ip)
     console.log(req.headers)
-    console.log(`cookies ${req.cookies}`)
+    console.log(`cookies`)
+    console.log(req.cookies)
     if(!req.cookies){
       console.log('this one no cookies')
       next()
