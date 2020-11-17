@@ -30,6 +30,8 @@ try {
   lat = parseFloat(lat).toFixed(3)
   lng = parseFloat(lng).toFixed(3)
     console.log(req.ip)
+    console.log(req.headers)
+    console.log(`cookies ${req.cookies}`)
     if(!req.cookies){
       console.log('this one no cookies')
       next()
