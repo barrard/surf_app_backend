@@ -55,7 +55,7 @@ try {
     // userVisits++
 
     // places+=`| lat:${lat}, lng:${lng} | `
-    res.cookie('places',JSON.stringify(places), { maxAge: new Date().getTime()+1000*60*60*24*700 , httpOnly: true, secure:false, SameSite: 'None'  });
+    res.cookie('places',JSON.stringify(places), { maxAge: new Date().getTime()+1000*60*60*24*700 , httpOnly: true, secure:false, sameSite: 'None'  });
     // res.cookie('userVisits',userVisits, { maxAge: new Date().getTime()*100000, httpOnly: true });
 
     
