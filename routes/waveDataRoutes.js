@@ -42,7 +42,8 @@ try {
     if(!places)places=JSON.stringify({})
 
     places=JSON.parse(places)
-
+    console.log(' ---------   Cookies    ---------')
+    console.log(req.cookies)
     if(!places[`${lat},${lng}`])places[`${lat},${lng}`]=0
     places[`${lat},${lng}`]++
     console.log(places)
