@@ -11,12 +11,26 @@ router.get('/', function (req, res, next) {
   res.send('Dave the wave slave')
 })
 
+const DATA_CACHE = {}
+let devData = null
 /* GET bouy data for given lat lng. */
 router.get('/lat/:lat/lng/:lng', async (req, res, next) => {
   // log(req.params)
   const { lat, lng } = req.params
   addUserHistory(req, res)
-  const data = await waveDataController.getWaveData(lat, lng)
+  let data
+  if(hasData(lat, lng, DATA_CACHE)){
+
+// if(devData){
+  data = getData(lat, lng,DATA_CACHE)
+  // data = devData
+  }else{
+
+     data = await waveDataController.getWaveData(lat, lng)
+    //  devData = data
+    setData(lat, lng, DATA_CACHE, data)
+  }
+  //  setTimeout(()=>res.send(data), 4000)
   res.send(data)
 })
 
@@ -52,4 +66,35 @@ try {
 } catch (err) {
   console.log({err})
 }
+}
+
+
+function hasData(lat, lng, DATA_CACHE){
+  lat = lat.split('.')[0]
+  lng = lng.split('.')[0]
+  console.log({lat, lng})
+  let data = DATA_CACHE[`${lat}${lng}`]
+  return data
+
+}
+
+function getData(lat, lng, DATA_CACHE){
+  lat = lat.split('.')[0]
+  lng = lng.split('.')[0]
+  console.log({lat, lng})
+  let data = DATA_CACHE[`${lat}${lng}`]
+  return data
+
+}
+
+function setData(lat, lng, DATA_CACHE, data){
+  lat = lat.split('.')[0]
+  lng = lng.split('.')[0]
+  console.log({lat, lng})
+  DATA_CACHE[`${lat}${lng}`] = data
+  setTimeout(()=>{
+    DATA_CACHE[`${lat}${lng}`] = false
+  }, 1000*60*20)//20 min cache
+  return data
+
 }

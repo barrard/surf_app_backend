@@ -22,8 +22,6 @@ function convertGPS (_lat, _lng) {
 function getWaveData (lat, lng) {
   // log('getWaveData')
   const latLng = convertGPS(lat, lng)
-  // const latLng = { lat1: "23.558N", lng1: "153.900W" };
-  // log(latLng)
 
   return get_nearby_stations(latLng) // {lat1:'23.558N' ,  lng1:'153.900W' }
 }
@@ -33,21 +31,18 @@ async function get_nearby_stations ({ lat1, lng1 }) {
   // log('getting station list')
   const distance = 450
   const url = `https://www.ndbc.noaa.gov/radial_search.php?lat1=${lat1}&lon1=${lng1}&uom=E&dist=${distance}&time=20`
-  // log({ url })
+  log({ url })
   var station_list_html = await rp(url)
   // await fs.writeFile('./station_list.xml', station_list_html)
   // var station_list_html = await fs.readFile('./station_list.xml')
 
   const $ = cheerio.load(station_list_html)
-  // var pre_tags = $('pre')
-  // log(pre_tags.length)
-  // let ch_pre_tags = cheerio.load(pre_tags)
   const spans = $('span')
   // const obshdr = $('span.obshdr').text()
   // log({ obshdr })
 
-  log(spans.length)
-  // log(pre_tags)
+  log(`${spans.length} rows of data for ${lat1} - ${lng1}`)
+
   const station_id_obj = {}
 
   spans.map((index, span) => {
