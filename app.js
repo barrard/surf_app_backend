@@ -14,6 +14,7 @@ const cors = require("cors");
 const origin_whitelist = [
     "http://192.168.0.215:3000",
     "http://localhost:3000",
+    "http://localhost:3003",
     "https://surfbuoys.com",
     "https://waves.dakine.website",
     "https://waves.raveaboutdave.com",
