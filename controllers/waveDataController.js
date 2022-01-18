@@ -63,7 +63,7 @@ async function trackHawaii() {
     const cleanedData = cleanData(data);
 
     setInterval(async () => {
-        data = await waveDataService.getWaveData(lat, lng, 20);
+        data = await waveDataService.getWaveData(lat, lng, 2);
 
         const cleanedData = cleanData(data);
     }, 1000 * 60 * 15);
