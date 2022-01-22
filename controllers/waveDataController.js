@@ -1,9 +1,12 @@
 /* Import the model and the service */
 const waveDataService = require("../services/waveDataService.js");
 const BuoyModel = require("../models/BuoyModel.js");
+const lat = "20";
+const lng = "-156";
 module.exports = {
     getWaveData,
     trackHawaii,
+    getNearHawaiiBuoys,
 };
 
 trackHawaii();
@@ -51,14 +54,132 @@ async function insertBuoyData(data) {
         console.log(err);
     }
 }
+
+async function getNearHawaiiBuoys(req, res) {
+    console.log("getNearHawaiiBuoys");
+
+    let spots = await BuoyModel.find(
+        {
+            coords: {
+                //     $geoNear: {
+                $near: {
+                    $geometry: { type: "Point", coordinates: [lng, lat] },
+                    $minDistance: 0,
+                    $maxDistance: 500000000,
+                },
+            },
+            createdAt: { $gt: new Date().getTime() - 1000 * 60 * 60 * 24 },
+        },
+        {},
+        { lean: true }
+    );
+
+    spots = spots.reduce((allSpots, spot) => {
+        if (!allSpots[spot.stationId]) {
+            allSpots[spot.stationId] = [];
+        }
+        allSpots[spot.stationId].push(spot);
+        return allSpots;
+    }, {});
+
+    for (let stationId in spots) {
+        spots[stationId] = spots[stationId].sort((a, b) => new Date(a.GMT).getTime() - new Date(b.GMT).getTime());
+    }
+
+    //Fill in data
+    for (let stationId in spots) {
+        const data = spots[stationId];
+        // spots[stationId] = spots[stationId].map((spot) => {
+        const keys = Object.keys(data[0]);
+
+        keys.forEach((key) => {
+            let lastValue = undefined;
+            let lastIndex;
+            let nullCount = 0;
+            data.forEach((reading, readingIndex) => {
+                const value = reading[key];
+                let _isNan = false;
+                console.log(value);
+
+                //first time through
+                if (lastValue === undefined) {
+                    lastValue = value;
+                    lastIndex = readingIndex;
+                }
+                //first few times this may happen
+                if (value === null && lastValue === null) {
+                    nullCount++;
+                }
+                //this is what we really care about
+                else if (value === null) {
+                    nullCount++;
+                }
+                if (value) {
+                    lastIndex = readingIndex;
+                    lastValue = parseFloat(value);
+                    if (isNaN(lastValue)) {
+                        console.log("is nan");
+                        _isNan = true;
+                        lastValue = value;
+                    }
+
+                    if (nullCount && !_isNan) {
+                        console.log("we need to backFill");
+
+                        //started with null, make all last values the only known value
+                        if (lastValue === null && lastIndex === 0) {
+                            for (let x = 0; x < nullCount; x++) {
+                                data[x][key] = value;
+                            }
+                            console.log(data);
+                        } else {
+                            console.log("We got here!");
+                            const diff = value - lastValue;
+                            const delta = diff / (nullCount + 1);
+
+                            for (let x = readingIndex - nullCount; x < readingIndex; x++) {
+                                const newValue = lastValue + delta;
+                                data[x][key] = newValue;
+                                lastValue = newValue;
+                            }
+                            console.log(data);
+                        }
+                        if (lastValue === NaN) {
+                            console.log("got nan");
+                        }
+                        lastIndex = readingIndex;
+                        nullCount = 0;
+                    } else if (nullCount) {
+                        console.log("what are we doing up so late");
+
+                        for (let x = readingIndex - nullCount; x < readingIndex; x++) {
+                            data[x][key] = lastValue;
+                            lastValue = value;
+                        }
+                        nullCount = 0;
+                    }
+                }
+                if (nullCount && readingIndex === data.length - 1 && lastValue !== null) {
+                    console.log("hit the end and got nulls");
+                    for (let x = readingIndex - nullCount; x <= readingIndex; x++) {
+                        data[x][key] = lastValue;
+                    }
+                }
+            });
+        });
+        // });
+    }
+
+    console.log({ spots });
+    res.json({ spots });
+}
+
 function getWaveData(lat, lng) {
     return waveDataService.getWaveData(lat, lng);
 }
 
 async function trackHawaii() {
-    const lat = "20";
-    const lng = "-156";
-    data = await waveDataService.getWaveData(lat, lng, 20);
+    data = await waveDataService.getWaveData(lat, lng, 2);
 
     const cleanedData = cleanData(data);
 

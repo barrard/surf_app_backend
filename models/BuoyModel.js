@@ -23,5 +23,6 @@ const BuoyData = mongoose.Schema(
     { timestamps: true }
 );
 BuoyData.index({ stationId: 1, GMT: 1, strike: 1 });
+BuoyData.index({ coords: "2dsphere" });
 
 module.exports = mongoose.model("BuoyData", BuoyData);
