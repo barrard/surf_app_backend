@@ -99,7 +99,6 @@ async function getNearHawaiiBuoys(req, res) {
             data.forEach((reading, readingIndex) => {
                 const value = reading[key];
                 let _isNan = false;
-                console.log(value);
 
                 //first time through
                 if (lastValue === undefined) {
@@ -115,26 +114,18 @@ async function getNearHawaiiBuoys(req, res) {
                     nullCount++;
                 }
                 if (value) {
-                    lastIndex = readingIndex;
-                    lastValue = parseFloat(value);
-                    if (isNaN(lastValue)) {
-                        console.log("is nan");
-                        _isNan = true;
-                        lastValue = value;
-                    }
-
                     if (nullCount && !_isNan) {
-                        console.log("we need to backFill");
+                        // console.log("we need to backFill");
 
                         //started with null, make all last values the only known value
                         if (lastValue === null && lastIndex === 0) {
                             for (let x = 0; x < nullCount; x++) {
                                 data[x][key] = value;
                             }
-                            console.log(data);
+                            // console.log(data);
                         } else {
-                            console.log("We got here!");
-                            const diff = value - lastValue;
+                            // console.log("We got here!");
+                            const diff = value - (lastValue || value);
                             const delta = diff / (nullCount + 1);
 
                             for (let x = readingIndex - nullCount; x < readingIndex; x++) {
@@ -142,7 +133,7 @@ async function getNearHawaiiBuoys(req, res) {
                                 data[x][key] = newValue;
                                 lastValue = newValue;
                             }
-                            console.log(data);
+                            // console.log(data);
                         }
                         if (lastValue === NaN) {
                             console.log("got nan");
@@ -150,17 +141,21 @@ async function getNearHawaiiBuoys(req, res) {
                         lastIndex = readingIndex;
                         nullCount = 0;
                     } else if (nullCount) {
-                        console.log("what are we doing up so late");
-
                         for (let x = readingIndex - nullCount; x < readingIndex; x++) {
                             data[x][key] = lastValue;
                             lastValue = value;
                         }
                         nullCount = 0;
                     }
+
+                    lastValue = parseFloat(value);
+                    if (isNaN(lastValue)) {
+                        _isNan = true;
+                        lastValue = value;
+                    }
+                    lastIndex = readingIndex;
                 }
                 if (nullCount && readingIndex === data.length - 1 && lastValue !== null) {
-                    console.log("hit the end and got nulls");
                     for (let x = readingIndex - nullCount; x <= readingIndex; x++) {
                         data[x][key] = lastValue;
                     }
@@ -170,7 +165,7 @@ async function getNearHawaiiBuoys(req, res) {
         // });
     }
 
-    console.log({ spots });
+    // console.log({ spots });
     res.json({ spots });
 }
 
