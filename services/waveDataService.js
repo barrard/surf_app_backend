@@ -7,6 +7,7 @@ const rp = require("request-promise");
 
 module.exports = {
     getWaveData,
+    fetchStation,
 };
 function convertGPS(_lat, _lng) {
     let lat = parseFloat(_lat);
@@ -23,6 +24,227 @@ function getWaveData(lat, lng, time) {
     const latLng = convertGPS(lat, lng);
 
     return get_nearby_stations(latLng, time); // {lat1:'23.558N' ,  lng1:'153.900W' }
+}
+
+async function fetchStation(stationId) {
+    const url = `https://www.ndbc.noaa.gov/station_page.php?station=${stationId}&uom=E&tz=GMT`;
+
+    const station_list_data = await rp(url);
+
+    const $ = cheerio.load(station_list_data);
+
+    const children = $("#data").children();
+    let firstDataTable = false;
+    let currentConditions = {};
+
+    let swellSummary = {};
+    const dataArray = [];
+    let tableCount = 0;
+    let startingMonth, startingDay, startingHour, startingYear;
+    Array.from(children).forEach((child) => {
+        // console.log(child.name);
+        //this will get the most current conditions
+        let isTable = child.name === "table";
+        if (isTable) {
+            tableCount++;
+        }
+        // console.log({ tableCount });
+        if (isTable && tableCount === 1 && !firstDataTable) {
+            firstDataTable = true;
+            //get the data from the first table
+            const children = $(child).children();
+
+            currentConditions = getCurrentConditions(children);
+            startingMonth = currentConditions.MM;
+            startingDay = currentConditions.DD;
+            startingHour = currentConditions.hour;
+            startingYear = currentConditions.year;
+            dataArray.push(currentConditions);
+        }
+        if (child.name === "table") {
+            const className = $(child).attr("class");
+            if (className === "dataTable") {
+                const rows = $("tr", "tbody", child);
+
+                const keys = [];
+
+                Array.from(rows).forEach((row, i) => {
+                    let previousData = null;
+                    if (i === 0) {
+                        return; // this is a graph row we dont care about
+                    } else if (i === 1) {
+                        //this is the legend
+                        //get legend
+                        let th = $("th", row);
+
+                        Array.from(th).forEach((header) => {
+                            let key;
+                            const html = $(header).html();
+
+                            if (html.includes("<br>")) {
+                                key = html.split("<br>")[0];
+                            } else {
+                                key = html;
+                            }
+
+                            // console.log(key);
+                            keys.push(key);
+                        });
+                    } else {
+                        previousData = {};
+                        //this is the actual data
+                        let td = $("td", row);
+                        previousData["year"] = startingYear;
+
+                        Array.from(td).forEach((tData, i) => {
+                            let val;
+                            const labelName = keys[i];
+                            const html = $(tData).html();
+                            // console.log(html);
+                            if (html === "-") return;
+                            //time looks like 3:20&#xA0;am
+                            else if (html.includes("&#xA0")) {
+                                const [_val] = html.split("&#xA0;");
+
+                                const currHour = _val.slice(0, 2);
+                                const currMin = _val.slice(2);
+
+                                previousData["Hour"] = currHour;
+                                previousData["Min"] = currMin;
+                                return;
+                            } else {
+                                val = html;
+                            }
+                            if (labelName === "MM" && val > startingMonth) {
+                                startingMonth = val;
+
+                                startingYear--;
+                                previousData["year"] = startingYear;
+                            }
+                            previousData[labelName] = val;
+                        });
+                    }
+                    if (previousData) {
+                        dataArray.push(previousData);
+                    }
+                });
+            } else if (tableCount === 4) {
+                //wave summary data
+                const children = $(child).children();
+
+                currentConditions = getCurrentConditions(children);
+                dataArray.push(currentConditions);
+            }
+        }
+    });
+
+    // console.log(dataArray);
+
+    const timeDateObj = {};
+    dataArray.forEach((data) => {
+        //get the GMT time
+        // console.log(data);
+        let { Hour, Min, DD, MM, year } = data;
+        const GMT_Date = `${DD} ${switchMonth(MM)} ${year} ${Hour}:${Min}:${00} GMT`;
+        // console.log(GMT_Date);
+        // console.log(new Date(GMT_Date).toLocaleString());
+        const time = new Date(GMT_Date).getTime();
+        if (!timeDateObj[time]) timeDateObj[time] = {};
+        for (let key in data) {
+            timeDateObj[time][key] = String(data[key].trim());
+        }
+    });
+
+    console.log(timeDateObj);
+    return timeDateObj;
+
+    function getCurrentConditions(children) {
+        const currentConditions = {};
+        let Hour, Min, year, day, month, onDate, time;
+        Array.from(children).forEach((child) => {
+            //this is the most current meta data
+            if (child.name === "caption") {
+                //mainly want time and date
+                const metaData = $(child).html();
+                if (metaData.startsWith("<a href")) {
+                    //this is a link we need to ignore on the swell date
+                    let [_, __, dateTime] = metaData.split("<br>");
+                    let [_time, _onDate] = dateTime.split("GMT");
+                    time = _time.trim();
+
+                    onDate = _onDate;
+                } else {
+                    let [_, caption] = metaData.split("<br>");
+                    // console.log(caption);
+                    let [_time, _onDate] = caption.split("GMT");
+                    time = _time.trim();
+                    onDate = _onDate;
+                }
+                let [__, date] = onDate.split("on");
+                date = date.split(":")[0];
+
+                Hour = time.slice(0, 2);
+                Min = time.slice(2);
+
+                currentConditions["Hour"] = Hour;
+                currentConditions["Min"] = Min;
+                if (!data) {
+                    console.log("wtf");
+                }
+
+                let [_month, _day, _year] = date.split("/");
+                month = _month.trim();
+                day = _day.trim();
+                year = _year.trim();
+                currentConditions["year"] = year;
+                currentConditions["MM"] = month;
+                currentConditions["DD"] = day;
+
+                // console.log({ Hour, Min, month, day, year });
+            }
+            //now look for table body?
+            else if (child.name === "tbody") {
+                const rows = $("tr", child);
+                currentConditions["year"] = year;
+                Array.from(rows).forEach((row, i) => {
+                    //theses rows are the current conditions.  skip the first row, it's a header
+                    if (i === 0) {
+                        return;
+                    } else {
+                        const rowData = $("td", row);
+                        let labelName, val;
+                        Array.from(rowData).forEach((data, i) => {
+                            if (i === 0) {
+                                //this is a chart button
+                                return;
+                            } else {
+                                //this will be label and data
+                                if (i === 1) {
+                                    //label
+                                    const text = $(data).text();
+                                    //parse the label
+                                    const [_, labelValueDirty] = text.split("(");
+                                    if (!labelValueDirty) return;
+                                    const [_labelName] = labelValueDirty.split(")");
+                                    labelName = _labelName;
+                                    currentConditions[labelName] = "";
+                                } else if (i === 2) {
+                                    //value
+                                    const value = $(data).text();
+                                    const [_val] = value.trim().split(" ");
+                                    val = _val;
+                                    if (!labelName) return;
+
+                                    currentConditions[labelName] = val;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        return currentConditions;
+    }
 }
 
 /* Get master list */
@@ -235,3 +457,35 @@ const obshder_array = [
     { name: "WWD", unit: "", fullName: "Wind Wave Dirrection" },
     { name: "STEEPNESS", unit: "", fullName: "Wave Type" },
 ];
+
+function switchMonth(month) {
+    switch (month) {
+        case "01":
+            return "Jan";
+        case "02":
+            return "Feb";
+        case "03":
+            return "Mar";
+        case "04":
+            return "Apr";
+        case "05":
+            return "May";
+        case "06":
+            return "Jun";
+        case "07":
+            return "Jul";
+        case "08":
+            return "Aug";
+        case "09":
+            return "Sep";
+        case "10":
+            return "Oct";
+        case "11":
+            return "Nov";
+        case "12":
+            return "Dec";
+
+        default:
+            break;
+    }
+}

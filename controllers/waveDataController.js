@@ -9,7 +9,12 @@ module.exports = {
     getNearHawaiiBuoys,
 };
 
+// Calls the method to watch a spot, e.i. hawaii
 trackHawaii();
+
+setInterval(() => {
+    trackHawaii();
+}, 1000 * 60 * 15);
 
 async function insertBuoyData(data) {
     try {
@@ -28,6 +33,23 @@ async function insertBuoyData(data) {
             LAT,
             LON,
         } = data;
+
+        console.log("inserting");
+        console.log({
+            stationId,
+            airTemp,
+            GMT,
+            height,
+            period,
+            swellDir,
+            tide,
+            waterTemp,
+            windDir,
+            windGust,
+            windSpeed,
+            LAT,
+            LON,
+        });
 
         await BuoyModel.findOneAndUpdate(
             {
@@ -176,13 +198,36 @@ function getWaveData(lat, lng) {
 async function trackHawaii() {
     data = await waveDataService.getWaveData(lat, lng, 2);
 
+    //get all station ids
+    console.log(data);
+    const stationIds = Object.keys(data.station_id_obj).map((stationId) => stationId);
+
     const cleanedData = cleanData(data);
+    console.log(cleanedData);
+    //fetch the stations
+    let stationCounter = 0;
+    for (let stationId in cleanedData) {
+        stationCounter++;
+        setTimeout(async () => {
+            const { LAT, LON } = cleanedData[stationId];
+            const stationData = await waveDataService.fetchStation(stationId);
 
-    setInterval(async () => {
-        data = await waveDataService.getWaveData(lat, lng, 2);
+            for (let time in stationData) {
+                let data = stationData[time];
+                data.GMT = new Date(parseInt(time)).toUTCString();
+                data.LAT = LAT;
+                data.LON = LON;
+                data.id = stationId;
 
-        const cleanedData = cleanData(data);
-    }, 1000 * 60 * 15);
+                await parseAndInsertData(data);
+            }
+        }, stationCounter * 1500);
+    }
+    // setInterval(async () => {
+    //     data = await waveDataService.getWaveData(lat, lng, 2);
+
+    //     const cleanedData = cleanData(data);
+    // }, 1000 * 60 * 15);
 }
 
 function cleanData(data) {
@@ -198,54 +243,63 @@ function cleanData(data) {
         let [weekday, day, month, year, time, timezone] = GMT.split(" ");
         let [hour, minute, seconds] = time.split(":");
         station.forEach(async (data) => {
-            let time = getTime(data);
-
-            time = time.split("");
-
-            let mins = time.splice(-2);
-            mins = mins.join("");
-            let hrs = time.join("");
-            let hrsInt = parseInt(hrs);
-            if (!hrsInt) {
-                hrsInt = 0;
-            }
-
-            if (!startingHour) startingHour = hrsInt;
-            if (hrsInt > startingHour) {
-                startingHour = hrsInt;
-                day = parseInt(day) - 1;
-            }
-
-            if (hrs.length === 0) hrs = `0${0}`;
-            if (hrs.length === 1) hrs = `0${hrs}`;
-            if (mins.length === 1) mins = `0${mins}`;
-            time = `${hrs}:${mins}:${"00"}`;
-
-            GMT = `${weekday} ${day} ${month} ${year} ${time} ${timezone}`;
-            time = new Date(GMT).getTime();
-            if (!cleanStationData[time]) cleanStationData[time] = {};
-            cleanStationData[time].stationId = id;
-            cleanStationData[time].LAT = data.LAT;
-            cleanStationData[time].LON = data.LON;
-            cleanStationData[time].GMT = GMT;
-
-            // console.log(station);
-            cleanStationData[time].period = getPeriod(data);
-            cleanStationData[time].height = getWaveHeight(data);
-            cleanStationData[time].swellDir = getSwellDir(data);
-
-            cleanStationData[time].windSpeed = getWindSpeed(data);
-            cleanStationData[time].windGust = getWindGust(data);
-            cleanStationData[time].windDir = getWindDir(data);
-
-            cleanStationData[time].airTemp = getAirTemp(data);
-            cleanStationData[time].waterTemp = getWaterTemp(data);
-            cleanStationData[time].tide = getTide(data);
-
-            await insertBuoyData(cleanStationData[time]);
+            cleanStationData.LAT = data.LAT;
+            cleanStationData.LON = data.LON;
+            //     await parseAndInsertData(data);
         });
     }
     return cleanData;
+}
+
+async function parseAndInsertData(data) {
+    const cleanStationData = {};
+
+    let time = getTime(data);
+
+    // time = time.split("");
+
+    // let mins = time.splice(-2);
+    // mins = mins.join("");
+    // let hrs = time.join("");
+    // let hrsInt = parseInt(hrs);
+    // if (!hrsInt) {
+    //     hrsInt = 0;
+    // }
+
+    // if (startingHour === undefined) startingHour = hrsInt;
+    // if (hrsInt > startingHour) {
+    //     startingHour = hrsInt;
+    //     day = parseInt(day) - 1;
+    // }
+
+    // if (hrs.length === 0) hrs = `0${0}`;
+    // if (hrs.length === 1) hrs = `0${hrs}`;
+    // if (mins.length === 1) mins = `0${mins}`;
+    // time = `${hrs}:${mins}:${"00"}`;
+
+    // GMT = `${weekday} ${day} ${month} ${year} ${time} ${timezone}`;
+    // time = new Date(GMT).getTime();
+    if (!cleanStationData[time]) cleanStationData[time] = {};
+    cleanStationData[time].stationId = data.id;
+    cleanStationData[time].LAT = data.LAT;
+    cleanStationData[time].LON = data.LON;
+    cleanStationData[time].GMT = time;
+
+    // console.log(station);
+    cleanStationData[time].period = getPeriod(data);
+    cleanStationData[time].height = getWaveHeight(data);
+    cleanStationData[time].swellDir = getSwellDir(data);
+
+    cleanStationData[time].windSpeed = getWindSpeed(data);
+    cleanStationData[time].windGust = getWindGust(data);
+    cleanStationData[time].windDir = getWindDir(data);
+
+    cleanStationData[time].airTemp = getAirTemp(data);
+    cleanStationData[time].waterTemp = getWaterTemp(data);
+    cleanStationData[time].tide = getTide(data);
+
+    await insertBuoyData(cleanStationData[time]);
+    return cleanStationData;
 }
 
 function getTide(data) {
@@ -285,7 +339,7 @@ function getWaveHeight(data) {
 }
 
 function getTime(data) {
-    const time = data.TIME;
+    const time = data.GMT;
 
     return `${time}`;
 }
