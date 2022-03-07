@@ -34,22 +34,22 @@ async function insertBuoyData(data) {
             LON,
         } = data;
 
-        console.log("inserting");
-        console.log({
-            stationId,
-            airTemp,
-            GMT,
-            height,
-            period,
-            swellDir,
-            tide,
-            waterTemp,
-            windDir,
-            windGust,
-            windSpeed,
-            LAT,
-            LON,
-        });
+        // console.log("inserting");
+        // console.log({
+        //     stationId,
+        //     airTemp,
+        //     GMT,
+        //     height,
+        //     period,
+        //     swellDir,
+        //     tide,
+        //     waterTemp,
+        //     windDir,
+        //     windGust,
+        //     windSpeed,
+        //     LAT,
+        //     LON,
+        // });
 
         await BuoyModel.findOneAndUpdate(
             {
@@ -199,11 +199,11 @@ async function trackHawaii() {
     data = await waveDataService.getWaveData(lat, lng, 2);
 
     //get all station ids
-    console.log(data);
+    // console.log(data);
     const stationIds = Object.keys(data.station_id_obj).map((stationId) => stationId);
 
     const cleanedData = cleanData(data);
-    console.log(cleanedData);
+    // console.log(cleanedData);
     //fetch the stations
     let stationCounter = 0;
     for (let stationId in cleanedData) {

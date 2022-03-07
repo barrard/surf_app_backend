@@ -155,7 +155,7 @@ async function fetchStation(stationId) {
         }
     });
 
-    console.log(timeDateObj);
+    // console.log(timeDateObj);
     return timeDateObj;
 
     function getCurrentConditions(children) {

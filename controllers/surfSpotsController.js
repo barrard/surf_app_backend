@@ -24,7 +24,7 @@ async function postSurfReport(req, res) {
         });
         let saved = await newSurfSpot.save();
         saved = saved.toJSON();
-        console.log({ saved });
+        // console.log({ saved });
         return res.json(saved);
     } catch (err) {
         console.log(err);
@@ -35,7 +35,7 @@ async function postSurfReport(req, res) {
 async function editSurfSpot(req, res, next) {
     const data = req.body;
 
-    console.log(data);
+    // console.log(data);
     const updated = await SurfSpotModel.findByIdAndUpdate(
         data.id,
         {
@@ -47,23 +47,23 @@ async function editSurfSpot(req, res, next) {
         { new: true }
     );
 
-    console.log(updated);
+    // console.log(updated);
     return res.json(updated);
 }
 
 async function deleteSurfSpot(req, res) {
     const id = req.params.id;
-    console.log(`delete ${id}`);
+    // console.log(`delete ${id}`);
     const resp = await SurfSpotModel.findByIdAndDelete(id);
-    console.log(resp);
+    // console.log(resp);
     res.json({ ok: "ok" });
 }
 
 async function getNearSurfSpot(req, res) {
-    console.log("getNearSurfSpot");
+    // console.log("getNearSurfSpot");
 
     const { lng, lat } = req.params;
-    console.log({ lng, lat });
+    // console.log({ lng, lat });
     const spots = await SurfSpotModel.find({
         coords: {
             //     $geoNear: {
@@ -75,7 +75,7 @@ async function getNearSurfSpot(req, res) {
         },
     });
 
-    console.log({ spots });
+    // console.log({ spots });
     res.json({ spots });
 }
 async function saveSurfSpot(req, res) {
@@ -89,7 +89,7 @@ async function saveSurfSpot(req, res) {
         });
         let saved = await newSurfSpot.save();
         saved = saved.toJSON();
-        console.log({ saved });
+        // console.log({ saved });
         return res.json(saved);
     } catch (err) {
         console.log(err);
