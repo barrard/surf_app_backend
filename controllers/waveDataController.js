@@ -147,11 +147,16 @@ async function getNearHawaiiBuoys(req, res) {
                             // console.log(data);
                         } else {
                             // console.log("We got here!");
-                            const diff = value - (lastValue || value);
+                            let diff = value - (lastValue || value);
+                            if (isNaN(diff)) {
+                                console.log(value);
+                                diff = value || lastValue;
+                            }
+
                             const delta = diff / (nullCount + 1);
 
                             for (let x = readingIndex - nullCount; x < readingIndex; x++) {
-                                const newValue = lastValue + delta;
+                                const newValue = isNaN(lastValue + delta) ? lastValue : lastValue + delta;
                                 data[x][key] = newValue;
                                 lastValue = newValue;
                             }
