@@ -19,21 +19,16 @@ const DATA_CACHE = {};
 let devData = null;
 /* GET bouy data for given lat lng. */
 router.get("/lat/:lat/lng/:lng", async (req, res, next) => {
-    // log(req.params)
     const { lat, lng } = req.params;
     addUserHistory(req, res);
     let data;
     if (hasData(lat, lng, DATA_CACHE)) {
-        // if(devData){
         data = getData(lat, lng, DATA_CACHE);
-        // data = devData
     } else {
         console.log("need to fetch");
         data = await waveDataController.getWaveData(lat, lng);
-        //  devData = data
         setData(lat, lng, DATA_CACHE, data);
     }
-    //  setTimeout(()=>res.send(data), 4000)
     res.send(data);
 });
 
@@ -46,7 +41,10 @@ function addUserHistory(req, res) {
         lng = parseFloat(lng).toFixed(3);
         console.log(req.ip);
 
-        res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+        res.header(
+            "Access-Control-Allow-Headers",
+            "Origin, X-Requested-With, Content-Type, Accept"
+        );
 
         if (!req.cookies) {
             console.log("this one no cookies");

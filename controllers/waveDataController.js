@@ -1,20 +1,56 @@
 /* Import the model and the service */
 const waveDataService = require("../services/waveDataService.js");
 const BuoyModel = require("../models/BuoyModel.js");
-const lat = "20";
-const lng = "-156";
+
+const HAWAII = {
+    lat: "20",
+    lng: "-156",
+};
+
+const PNW = {
+    lat: "47",
+    lng: "-125",
+};
+
+const LA = {
+    lat: "34",
+    lng: "-118",
+};
 module.exports = {
     getWaveData,
     trackHawaii,
-    getNearHawaiiBuoys,
+    getHawaiiBuoys,
+    getNearByBuoys,
 };
 
-// Calls the method to watch a spot, e.i. hawaii
-trackHawaii();
+const _1Min = 1000 * 60;
+const _5Min = _1Min * 5;
+const _15Mins = _1Min * 15;
+const PWN_Timeout = _1Min * 2;
+const LA_Timeout = _1Min * 3;
 
+// Calls the method to watch a spot, e.i. hawaii
+trackLA();
+//call every 15 mins
 setInterval(() => {
     trackHawaii();
-}, 1000 * 60 * 15);
+}, _15Mins);
+
+//wait 5 minutes and call pnw
+setTimeout(() => {
+    trackPacificNorthWest();
+    setInterval(() => {
+        trackPacificNorthWest();
+    }, _15Mins);
+}, PWN_Timeout);
+
+//wait 5 minutes and call pnw
+setTimeout(() => {
+    trackLA();
+    setInterval(() => {
+        trackLA();
+    }, _15Mins);
+}, LA_Timeout);
 
 async function insertBuoyData(data) {
     try {
@@ -33,23 +69,6 @@ async function insertBuoyData(data) {
             LAT,
             LON,
         } = data;
-
-        // console.log("inserting");
-        // console.log({
-        //     stationId,
-        //     airTemp,
-        //     GMT,
-        //     height,
-        //     period,
-        //     swellDir,
-        //     tide,
-        //     waterTemp,
-        //     windDir,
-        //     windGust,
-        //     windSpeed,
-        //     LAT,
-        //     LON,
-        // });
 
         await BuoyModel.findOneAndUpdate(
             {
@@ -77,26 +96,98 @@ async function insertBuoyData(data) {
     }
 }
 
-async function getNearHawaiiBuoys(req, res) {
-    console.log("getNearHawaiiBuoys");
-
-    let spots = await BuoyModel.find(
+async function findBuoysNear({ lat, lng }) {
+    let buoys = await BuoyModel.find(
         {
             coords: {
                 //     $geoNear: {
                 $near: {
                     $geometry: { type: "Point", coordinates: [lng, lat] },
                     $minDistance: 0,
-                    $maxDistance: 500000000,
+                    $maxDistance: 2000000000,
                 },
             },
-            createdAt: { $gt: new Date().getTime() - 1000 * 60 * 60 * 24 },
+            createdAt: { $gt: new Date().getTime() - 1000 * 60 * 60 * 2 },
         },
         {},
         { lean: true }
     );
+    return buoys;
+}
 
-    spots = spots.reduce((allSpots, spot) => {
+async function getNearByBuoys(req, res) {
+    const { lat, lng } = req.params;
+
+    const RANGE = 800;
+    let buoys;
+
+    //is hawaii
+    const isHAWAII =
+        calcCrow({
+            lat1: HAWAII.lat,
+            lon1: HAWAII.lng,
+            lat2: lat,
+            lon2: lng,
+        }) < RANGE;
+
+    // is PNW
+    const isPNW =
+        calcCrow({
+            lat1: PNW.lat,
+            lon1: PNW.lng,
+            lat2: lat,
+            lon2: lng,
+        }) < RANGE;
+
+    // is LA
+    const isLA =
+        calcCrow({
+            lat1: LA.lat,
+            lon1: LA.lng,
+            lat2: lat,
+            lon2: lng,
+        }) < RANGE;
+
+    if (isHAWAII) {
+        buoys = await getHawaiiBuoys();
+    } else if (isPNW) {
+        buoys = await getNearPNW();
+        // buoys = await getNearLA();
+    } else if (isLA) {
+        buoys = await getNearLA();
+    }
+
+    console.log({ isHAWAII, isPNW, isLA });
+
+    return res.json(buoys);
+}
+
+//This function takes in latitude and longitude of two location and returns the distance between them as the crow flies (in km)
+function calcCrow({ lat1, lon1, lat2, lon2 }) {
+    var R = 6371; // km
+    var dLat = toRad(lat2 - lat1);
+    var dLon = toRad(lon2 - lon1);
+    var lat1 = toRad(lat1);
+    var lat2 = toRad(lat2);
+
+    var a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.sin(dLon / 2) *
+            Math.sin(dLon / 2) *
+            Math.cos(lat1) *
+            Math.cos(lat2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    var d = R * c;
+    return d;
+}
+
+// Converts numeric degrees to radians
+function toRad(Value) {
+    return (Value * Math.PI) / 180;
+}
+
+function cleanBuoyData(buoys) {
+    buoys = buoys.reduce((allSpots, spot) => {
         if (!allSpots[spot.stationId]) {
             allSpots[spot.stationId] = [];
         }
@@ -104,14 +195,16 @@ async function getNearHawaiiBuoys(req, res) {
         return allSpots;
     }, {});
 
-    for (let stationId in spots) {
-        spots[stationId] = spots[stationId].sort((a, b) => new Date(a.GMT).getTime() - new Date(b.GMT).getTime());
+    for (let stationId in buoys) {
+        buoys[stationId] = buoys[stationId].sort(
+            (a, b) => new Date(a.GMT).getTime() - new Date(b.GMT).getTime()
+        );
     }
 
     //Fill in data
-    for (let stationId in spots) {
-        const data = spots[stationId];
-        // spots[stationId] = spots[stationId].map((spot) => {
+    for (let stationId in buoys) {
+        const data = buoys[stationId];
+        // buoys[stationId] = buoys[stationId].map((spot) => {
         const keys = Object.keys(data[0]);
 
         keys.forEach((key) => {
@@ -155,8 +248,14 @@ async function getNearHawaiiBuoys(req, res) {
 
                             const delta = diff / (nullCount + 1);
 
-                            for (let x = readingIndex - nullCount; x < readingIndex; x++) {
-                                const newValue = isNaN(lastValue + delta) ? lastValue : lastValue + delta;
+                            for (
+                                let x = readingIndex - nullCount;
+                                x < readingIndex;
+                                x++
+                            ) {
+                                const newValue = isNaN(lastValue + delta)
+                                    ? lastValue
+                                    : lastValue + delta;
                                 data[x][key] = newValue;
                                 lastValue = newValue;
                             }
@@ -168,7 +267,11 @@ async function getNearHawaiiBuoys(req, res) {
                         lastIndex = readingIndex;
                         nullCount = 0;
                     } else if (nullCount) {
-                        for (let x = readingIndex - nullCount; x < readingIndex; x++) {
+                        for (
+                            let x = readingIndex - nullCount;
+                            x < readingIndex;
+                            x++
+                        ) {
                             data[x][key] = lastValue;
                             lastValue = value;
                         }
@@ -182,8 +285,16 @@ async function getNearHawaiiBuoys(req, res) {
                     }
                     lastIndex = readingIndex;
                 }
-                if (nullCount && readingIndex === data.length - 1 && lastValue !== null) {
-                    for (let x = readingIndex - nullCount; x <= readingIndex; x++) {
+                if (
+                    nullCount &&
+                    readingIndex === data.length - 1 &&
+                    lastValue !== null
+                ) {
+                    for (
+                        let x = readingIndex - nullCount;
+                        x <= readingIndex;
+                        x++
+                    ) {
                         data[x][key] = lastValue;
                     }
                 }
@@ -191,31 +302,90 @@ async function getNearHawaiiBuoys(req, res) {
         });
         // });
     }
+    return buoys;
+}
 
-    // console.log({ spots });
-    res.json({ spots });
+async function getNearLA() {
+    console.log("getNearLA");
+
+    let buoys = await findBuoysNear({ lat: LA.lat, lng: LA.lng });
+
+    buoys = cleanBuoyData(buoys);
+
+    return buoys;
+}
+
+async function getNearPNW() {
+    console.log("getNearPNW");
+
+    let buoys = await findBuoysNear({ lat: PNW.lat, lng: PNW.lng });
+
+    buoys = cleanBuoyData(buoys);
+
+    return buoys;
+}
+
+async function getHawaiiBuoys() {
+    console.log("getHawaiiBuoys");
+
+    let buoys = await findBuoysNear({ lat: HAWAII.lat, lng: HAWAII.lng });
+
+    buoys = cleanBuoyData(buoys);
+
+    return buoys;
 }
 
 function getWaveData(lat, lng) {
     return waveDataService.getWaveData(lat, lng);
 }
 
-async function trackHawaii() {
+async function trackLA() {
+    console.log("Tracking LA Buoys");
+    const { lat, lng } = LA;
     data = await waveDataService.getWaveData(lat, lng, 2);
+    fetchStationData(data);
+}
 
+async function trackPacificNorthWest() {
+    console.log("Tracking PNW Buoys");
+    const { lat, lng } = PNW;
+    data = await waveDataService.getWaveData(lat, lng, 2);
+    fetchStationData(data);
+}
+
+async function trackHawaii() {
+    console.log("Tracking HAWAII Buoys");
+    const { lat, lng } = HAWAII;
+    const data = await waveDataService.getWaveData(lat, lng, 2);
+    fetchStationData(data);
+}
+
+function fetchStationData(data) {
+    const timePer = 3000;
     //get all station ids
     // console.log(data);
-    const stationIds = Object.keys(data.station_id_obj).map((stationId) => stationId);
+    const stationIds = Object.keys(data.station_id_obj).map(
+        (stationId) => stationId
+    );
 
     const cleanedData = cleanData(data);
     // console.log(cleanedData);
     //fetch the stations
     let stationCounter = 0;
+    let count = 0;
+    const stationCount = Object.keys(cleanedData).length;
+    console.log(
+        `Collecting ${stationCount} data in ${
+            (stationCount * timePer) / 1000 / 60
+        } Minutes`
+    );
     for (let stationId in cleanedData) {
         stationCounter++;
         setTimeout(async () => {
+            count++;
             const { LAT, LON } = cleanedData[stationId];
             const stationData = await waveDataService.fetchStation(stationId);
+            console.log(`${count} Data fetched and inserted for ${stationId}`);
 
             for (let time in stationData) {
                 let data = stationData[time];
@@ -226,13 +396,8 @@ async function trackHawaii() {
 
                 await parseAndInsertData(data);
             }
-        }, stationCounter * 1500);
+        }, stationCounter * timePer);
     }
-    // setInterval(async () => {
-    //     data = await waveDataService.getWaveData(lat, lng, 2);
-
-    //     const cleanedData = cleanData(data);
-    // }, 1000 * 60 * 15);
 }
 
 function cleanData(data) {
@@ -261,49 +426,26 @@ async function parseAndInsertData(data) {
 
     let time = getTime(data);
 
-    // time = time.split("");
-
-    // let mins = time.splice(-2);
-    // mins = mins.join("");
-    // let hrs = time.join("");
-    // let hrsInt = parseInt(hrs);
-    // if (!hrsInt) {
-    //     hrsInt = 0;
-    // }
-
-    // if (startingHour === undefined) startingHour = hrsInt;
-    // if (hrsInt > startingHour) {
-    //     startingHour = hrsInt;
-    //     day = parseInt(day) - 1;
-    // }
-
-    // if (hrs.length === 0) hrs = `0${0}`;
-    // if (hrs.length === 1) hrs = `0${hrs}`;
-    // if (mins.length === 1) mins = `0${mins}`;
-    // time = `${hrs}:${mins}:${"00"}`;
-
-    // GMT = `${weekday} ${day} ${month} ${year} ${time} ${timezone}`;
-    // time = new Date(GMT).getTime();
-    if (!cleanStationData[time]) cleanStationData[time] = {};
-    cleanStationData[time].stationId = data.id;
-    cleanStationData[time].LAT = data.LAT;
-    cleanStationData[time].LON = data.LON;
-    cleanStationData[time].GMT = time;
+    // if (!cleanStationData[time]) cleanStationData[time] = {};
+    cleanStationData.stationId = data.id;
+    cleanStationData.LAT = data.LAT;
+    cleanStationData.LON = data.LON;
+    cleanStationData.GMT = time;
 
     // console.log(station);
-    cleanStationData[time].period = getPeriod(data);
-    cleanStationData[time].height = getWaveHeight(data);
-    cleanStationData[time].swellDir = getSwellDir(data);
+    cleanStationData.period = getPeriod(data);
+    cleanStationData.height = getWaveHeight(data);
+    cleanStationData.swellDir = getSwellDir(data);
 
-    cleanStationData[time].windSpeed = getWindSpeed(data);
-    cleanStationData[time].windGust = getWindGust(data);
-    cleanStationData[time].windDir = getWindDir(data);
+    cleanStationData.windSpeed = getWindSpeed(data);
+    cleanStationData.windGust = getWindGust(data);
+    cleanStationData.windDir = getWindDir(data);
 
-    cleanStationData[time].airTemp = getAirTemp(data);
-    cleanStationData[time].waterTemp = getWaterTemp(data);
-    cleanStationData[time].tide = getTide(data);
+    cleanStationData.airTemp = getAirTemp(data);
+    cleanStationData.waterTemp = getWaterTemp(data);
+    cleanStationData.tide = getTide(data);
 
-    await insertBuoyData(cleanStationData[time]);
+    await insertBuoyData(cleanStationData);
     return cleanStationData;
 }
 

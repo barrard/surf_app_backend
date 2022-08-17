@@ -9,7 +9,10 @@ const {
     postSurfReport,
 } = require("../controllers/surfSpotsController");
 
-const { getNearHawaiiBuoys } = require("../controllers/waveDataController");
+const {
+    getNearHawaiiBuoys,
+    getNearByBuoys,
+} = require("../controllers/waveDataController");
 /* GET home page. */
 router.get("/", function (req, res, next) {
     res.send("Dave the wave slave");
@@ -24,6 +27,7 @@ router.delete("/deleteSurfSpot/:id", deleteSurfSpot);
 router.post("/editSurfSpot", editSurfSpot);
 router.post("/postSurfReport", postSurfReport);
 
-router.get("/hawaii-buoys", getNearHawaiiBuoys);
+// router.get("/hawaii-buoys", getNearHawaiiBuoys);
+router.get("/nearby-buoys/:lat/:lng", getNearByBuoys);
 
 module.exports = router;

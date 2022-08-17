@@ -145,7 +145,9 @@ async function fetchStation(stationId) {
         //get the GMT time
         // console.log(data);
         let { Hour, Min, DD, MM, year } = data;
-        const GMT_Date = `${DD} ${switchMonth(MM)} ${year} ${Hour}:${Min}:${00} GMT`;
+        const GMT_Date = `${DD} ${switchMonth(
+            MM
+        )} ${year} ${Hour}:${Min}:${00} GMT`;
         // console.log(GMT_Date);
         // console.log(new Date(GMT_Date).toLocaleString());
         const time = new Date(GMT_Date).getTime();
@@ -188,9 +190,9 @@ async function fetchStation(stationId) {
 
                 currentConditions["Hour"] = Hour;
                 currentConditions["Min"] = Min;
-                if (!data) {
-                    console.log("wtf");
-                }
+                // if (!data) {
+                //     console.log("wtf");
+                // }
 
                 let [_month, _day, _year] = date.split("/");
                 month = _month.trim();
@@ -223,9 +225,11 @@ async function fetchStation(stationId) {
                                     //label
                                     const text = $(data).text();
                                     //parse the label
-                                    const [_, labelValueDirty] = text.split("(");
+                                    const [_, labelValueDirty] =
+                                        text.split("(");
                                     if (!labelValueDirty) return;
-                                    const [_labelName] = labelValueDirty.split(")");
+                                    const [_labelName] =
+                                        labelValueDirty.split(")");
                                     labelName = _labelName;
                                     currentConditions[labelName] = "";
                                 } else if (i === 2) {
@@ -270,10 +274,10 @@ async function get_nearby_stations({ lat1, lng1 }, time) {
     spans.map((index, span) => {
         /* Each station has an href and a background color */
         const station_link = $(span.children).attr("href");
-        const station_data = $(span).text();
         const bg_color = $(span).css("background-color");
 
         if (station_link && bg_color) {
+            const station_data = $(span).text();
             const station_id = station_link.split("=")[1];
             // log({ station_data, station_link, station_id })
 
@@ -339,42 +343,42 @@ async function parse_wave_detail_page(table_rows, station_id, gps_coords) {
     }
 }
 
-async function parse_wave_details({ table_rows, station_id, gps_coords }) {
-    /*
-    12
-    MM, DD, TIME
-    WVHTft = wave height
-    SwHft = swell height
-    SwPsec = swell eriod
-    SwD = swell dirrection
-    STEEPNESS = description
-    WWH = wind wave height
-    WWP = wind wave period
-    WWD = wind wave dirrection
-    APD = Average Wave Period
-    */
-    const $ = cheerio.load(table_rows);
+// async function parse_wave_details({ table_rows, station_id, gps_coords }) {
+//     /*
+//     12
+//     MM, DD, TIME
+//     WVHTft = wave height
+//     SwHft = swell height
+//     SwPsec = swell eriod
+//     SwD = swell dirrection
+//     STEEPNESS = description
+//     WWH = wind wave height
+//     WWP = wind wave period
+//     WWD = wind wave dirrection
+//     APD = Average Wave Period
+//     */
+//     const $ = cheerio.load(table_rows);
 
-    log("parse wave details");
-    const headers = table_rows[1];
-    const header_obj = {};
-    $(headers)
-        .children()
-        .map((index, header) => {
-            const text = $(header).text();
-            header_obj[index] = text;
-        });
-    table_rows.map((index, row) => {
-        /* parse each col */
-        const cols = $(row).children();
-        const row_data = {};
-        cols.map((index, col) => {
-            const symbol = header_obj[index];
-            row_data[symbol] = $(col).text();
-        });
-        log({ row_data });
-    });
-}
+//     log("parse wave details");
+//     const headers = table_rows[1];
+//     const header_obj = {};
+//     $(headers)
+//         .children()
+//         .map((index, header) => {
+//             const text = $(header).text();
+//             header_obj[index] = text;
+//         });
+//     table_rows.map((index, row) => {
+//         /* parse each col */
+//         const cols = $(row).children();
+//         const row_data = {};
+//         cols.map((index, col) => {
+//             const symbol = header_obj[index];
+//             row_data[symbol] = $(col).text();
+//         });
+//         log({ row_data });
+//     });
+// }
 
 async function parse_observations({ table_rows, station_id, gps_coords }) {
     /* 18
@@ -413,7 +417,9 @@ function parse_current_obs(obs_text) {
     array_data.forEach((data, index) => {
         const name = obshder_array[index].name;
         // log({ data, index, name })
-        data_obj[obshder_array[index].name] = isNaN(data) ? data : parseFloat(data);
+        data_obj[obshder_array[index].name] = isNaN(data)
+            ? data
+            : parseFloat(data);
     });
     return data_obj;
 }
@@ -424,37 +430,37 @@ const obshder_array = [
     { name: "TIME", unit: "GMT", fullName: "GMT Time" },
     { name: "LAT", unit: "", fullName: "Latitude" },
     { name: "LON", unit: "", fullName: "Longitude" },
-    { name: "DIST", unit: "nm", fullName: "Distance to Bouy" },
-    { name: "HDG", unit: "°T", fullName: "Dirrection to Bouy" },
-    { name: "WDIR", unit: "°T", fullName: "Wind Dirrection" },
+    { name: "DIST", unit: "nm", fullName: "Distance to BuOy" },
+    { name: "HDG", unit: "°T", fullName: "Direction to BuOy" },
+    { name: "WDIR", unit: "°T", fullName: "Wind Direction" },
     { name: "WSPD", unit: "kts", fullName: "Wind Speed" },
     { name: "GST", unit: "kts", fullName: "Wind Gust" },
     { name: "WVHT", unit: "ft", fullName: "Wave Height" },
     { name: "DPD", unit: "sec", fullName: "Wave Period" },
     { name: "APD", unit: "sec", fullName: "Avg. Wave Period" },
-    { name: "MWD", unit: "°T", fullName: "Wave Dirrection" },
+    { name: "MWD", unit: "°T", fullName: "Wave Direction" },
     { name: "PRES", unit: "in", fullName: "Pressure" },
     { name: "PTDY", unit: "in", fullName: "Pressure Tendency" },
     { name: "ATMP", unit: "°F", fullName: "Air Temperature" },
-    { name: "WTMP", unit: "°F", fullName: "Water Tempterature" },
+    { name: "WTMP", unit: "°F", fullName: "Water Temperature" },
     { name: "DEWP", unit: "°F", fullName: "Dew Temperature" },
     { name: "VIS", unit: "nm", fullName: "Visibility" },
     { name: "TCC", unit: "1/8", fullName: "Total Cloud Cover" },
     { name: "TIDE", unit: "ft", fullName: "Tide" },
     { name: "S1HT", unit: "ft", fullName: "Primary Swell Height" },
     { name: "S1PD", unit: "sec", fullName: "Primary Swell Period" },
-    { name: "S1DIR", unit: "°T", fullName: "Primary Swell Dirrection" },
+    { name: "S1DIR", unit: "°T", fullName: "Primary Swell Direction" },
     { name: "S2HT", unit: "ft", fullName: "Secondary Swell Height" },
     { name: "S2PD", unit: "sec", fullName: "Secondary Swell Period" },
-    { name: "S2DIR", unit: "°T", fullName: "Secondary Swell Dirrection" },
+    { name: "S2DIR", unit: "°T", fullName: "Secondary Swell Direction" },
     { name: "Ice", unit: "Acc", fullName: "Ice Accumulation" },
     { name: "Sea", unit: "Acc", fullName: "Sea Ice" },
     { name: "SwH", unit: "ft", fullName: "Swell Height" },
     { name: "SwP", unit: "sec", fullName: "Swell Period" },
-    { name: "SwD", unit: "", fullName: "Swell Dirrection" },
+    { name: "SwD", unit: "", fullName: "Swell Direction" },
     { name: "WWH", unit: "ft", fullName: "Wind Wave Height" },
     { name: "WWP", unit: "sec", fullName: "Wind Wave PEriod" },
-    { name: "WWD", unit: "", fullName: "Wind Wave Dirrection" },
+    { name: "WWD", unit: "", fullName: "Wind Wave Direction" },
     { name: "STEEPNESS", unit: "", fullName: "Wave Type" },
 ];
 
