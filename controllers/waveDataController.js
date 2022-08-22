@@ -99,15 +99,17 @@ async function insertBuoyData(data) {
 async function findBuoysNear({ lat, lng }) {
     let buoys = await BuoyModel.find(
         {
-            coords: {
-                //     $geoNear: {
-                $near: {
-                    $geometry: { type: "Point", coordinates: [lng, lat] },
-                    $minDistance: 0,
-                    $maxDistance: 2000000000,
-                },
+            // coords: {
+            //     //     $geoNear: {
+            //     $near: {
+            //         $geometry: { type: "Point", coordinates: [lng, lat] },
+            //         $minDistance: 0,
+            //         $maxDistance: 2000000000,
+            //     },
+            // },
+            createdAt: {
+                $gt: new Date(new Date().getTime() - 1000 * 60 * 60 * 24),
             },
-            createdAt: { $gt: new Date().getTime() - 1000 * 60 * 60 * 2 },
         },
         {},
         { lean: true }
