@@ -4,7 +4,7 @@ const pointSchema = require("./PointModel");
 const BuoyData = mongoose.Schema(
     {
         stationId: { type: String, required: true },
-        GMT: { type: String, required: true },
+        GMT: { type: Date, required: true },
 
         coords: {
             type: pointSchema,

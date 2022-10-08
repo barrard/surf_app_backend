@@ -255,7 +255,7 @@ async function fetchStation(stationId) {
 async function get_nearby_stations({ lat1, lng1 }, time) {
     // log('getting station list')
     time = time || 20;
-    const distance = 450;
+    const distance = 999;
     const url = `https://www.ndbc.noaa.gov/radial_search.php?lat1=${lat1}&lon1=${lng1}&uom=E&dist=${distance}&time=${time}`;
     log({ url });
     var station_list_html = await rp(url);

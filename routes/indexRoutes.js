@@ -12,11 +12,14 @@ const {
 const {
     getNearHawaiiBuoys,
     getNearByBuoys,
+    getGroupLocations,
 } = require("../controllers/waveDataController");
 /* GET home page. */
 router.get("/", function (req, res, next) {
     res.send("Dave the wave slave");
 });
+
+router.get("/groupLocations", getGroupLocations);
 
 router.post("/addSurfSpot", saveSurfSpot);
 
