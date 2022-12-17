@@ -443,9 +443,6 @@ async function fetchStationData(data) {
                 if (stationDataPoints > 10) {
                     break;
                 }
-                console.log(
-                    `inserting stationId ${stationId} stationDataPoint: ${stationDataPoints}`
-                );
 
                 await parseAndInsertData(data);
             }
