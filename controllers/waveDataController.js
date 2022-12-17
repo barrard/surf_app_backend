@@ -57,7 +57,6 @@ setTimeout(() => {
 }, MIN_6_Timeout);
 
 setInterval(() => {
-    trackHawaii();
     trackAK();
 }, _20Mins);
 
