@@ -24,9 +24,9 @@ const _5Min = _1Min * 5;
 const _20Mins = _1Min * 20;
 const _20Min = _1Min * 20;
 
-const PWN_Timeout = _1Min * 6;
-const LA_Timeout = _1Min * 16;
-const AK_Timeout = 0; //_1Min * 5;
+const MIN_6_Timeout = _1Min * 6;
+const MIN_16_Timeout = _1Min * 16;
+const ZERO_Timeout = 0; //_1Min * 5;
 
 setInterval(() => {
     recentlyFetched = {};
@@ -38,14 +38,14 @@ setTimeout(() => {
     setInterval(() => {
         trackLA();
     }, _20Mins);
-}, LA_Timeout); //call every 15 mins
+}, MIN_16_Timeout); //call every 15 mins
 
 setTimeout(() => {
-    trackAK();
+    trackHawaii();
     setInterval(() => {
-        trackAK();
+        trackHawaii();
     }, _20Mins);
-}, AK_Timeout); //call every 15 mins
+}, ZERO_Timeout); //call every 15 mins
 
 //wait 5 minutes and call pnw
 setTimeout(() => {
@@ -53,10 +53,11 @@ setTimeout(() => {
     setInterval(() => {
         trackPacificNorthWest();
     }, _20Mins);
-}, PWN_Timeout);
+}, MIN_6_Timeout);
 
 setInterval(() => {
     trackHawaii();
+    trackAK();
 }, _20Mins);
 
 async function insertBuoyData(data) {
@@ -393,8 +394,8 @@ async function trackHawaii() {
     fetchStationData(data);
 }
 
-function fetchStationData(data) {
-    const timePer = 3000;
+async function fetchStationData(data) {
+    const timePer = 1000;
     //get all station ids
     // console.log(data);
     const stationIds = Object.keys(data.station_id_obj).map(
@@ -405,35 +406,57 @@ function fetchStationData(data) {
     // console.log(cleanedData);
     //fetch the stations
     let stationCounter = 0;
-    let count = 0;
+    // let count = 0;
     const stationCount = Object.keys(cleanedData).length;
     console.log(
         `Collecting ${stationCount} data in ${
             (stationCount * timePer) / 1000 / 60
         } Minutes`
     );
-    for (let stationId in cleanedData) {
-        stationCounter++;
-        setTimeout(async () => {
-            count++;
-            const { LAT, LON } = cleanedData[stationId];
-            if (recentlyFetched[stationId])
-                return console.log(`Recently got ${stationId}`);
+
+    await getStationData(stationIds, stationCounter);
+
+    //get this stations data
+    async function getStationData(stationIds, stationCounter) {
+        const stationId = stationIds[stationCounter];
+
+        const { LAT, LON } = cleanedData[stationId];
+        if (recentlyFetched[stationId]) {
+            return console.log(`Recently got ${stationId}`);
+        } else {
             recentlyFetched[stationId] = true;
 
             const stationData = await waveDataService.fetchStation(stationId);
-            console.log(`${count} Data fetched and inserted for ${stationId}`);
+            console.log(
+                `${stationCounter} Data fetched and inserted for ${stationId}`
+            );
 
+            //lets limit this to 10
+            let stationDataPoints = 0;
             for (let time in stationData) {
                 let data = stationData[time];
                 data.GMT = new Date(parseInt(time)).toUTCString();
                 data.LAT = LAT;
                 data.LON = LON;
                 data.id = stationId;
+                stationDataPoints++;
+                if (stationDataPoints > 10) {
+                    break;
+                }
+                console.log(
+                    `inserting stationId ${stationId} stationDataPoint: ${stationDataPoints}`
+                );
 
                 await parseAndInsertData(data);
             }
-        }, stationCounter * timePer);
+        }
+
+        stationCounter++;
+        if (stationCounter < stationIds.length) {
+            setTimeout(async () => {
+                await getStationData(stationIds, stationCounter);
+            }, timePer);
+        }
     }
 }
 
