@@ -17,6 +17,13 @@ router.get("/", function (req, res, next) {
 
 const DATA_CACHE = {};
 let devData = null;
+
+router.get("/stationId/:stationId", async (req, res, next) => {
+    const stationId = req.params.stationId;
+
+    data = await waveDataController.getBuoyData(stationId);
+    res.send(data);
+});
 /* GET bouy data for given lat lng. */
 router.get("/lat/:lat/lng/:lng", async (req, res, next) => {
     const { lat, lng } = req.params;

@@ -17,6 +17,7 @@ module.exports = {
     getHawaiiBuoys,
     getGroupLocations,
     getNearByBuoys,
+    getBuoyData,
 };
 
 const _1Min = 1000 * 60;
@@ -104,8 +105,23 @@ async function insertBuoyData(data) {
     }
 }
 
+async function getBuoyData(stationId) {
+    const TIME = 1000 * 60 * 60 * 24 * 2;
+
+    let data = await BuoyModel.find({
+        stationId,
+        GMT: {
+            $gt: new Date(new Date().getTime() - TIME),
+        },
+    });
+
+    data = cleanBuoyData(data);
+    return data;
+}
 async function findBuoysNear({ lat, lng }) {
     console.time("getBouysByDistance");
+    //TIME
+    const TIME = 1000 * 60 * 60 * 2;
     //check cache
     if (cacheData) {
         return cacheData;
@@ -122,7 +138,7 @@ async function findBuoysNear({ lat, lng }) {
             // const TIME = //1 hours
 
             GMT: {
-                $gt: new Date(new Date().getTime() - 1000 * 60 * 60 * 2),
+                $gt: new Date(new Date().getTime() - TIME),
             },
         },
         {},
