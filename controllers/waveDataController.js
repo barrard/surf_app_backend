@@ -410,7 +410,7 @@ async function trackHawaii() {
 }
 
 async function fetchStationData(data) {
-    const timePer = 1000;
+    const timePer = 3000;
     //get all station ids
     // console.log(data);
     const stationIds = Object.keys(data.station_id_obj).map(
@@ -437,7 +437,7 @@ async function fetchStationData(data) {
 
         const { LAT, LON } = cleanedData[stationId];
         if (recentlyFetched[stationId]) {
-            return console.log(`Recently got ${stationId}`);
+            console.log(`Recently got ${stationId}`);
         } else {
             recentlyFetched[stationId] = true;
 
