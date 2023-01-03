@@ -430,6 +430,7 @@ async function fetchStationData(data) {
     );
 
     await getStationData(stationIds, stationCounter);
+    console.log("Done Buoys");
 
     //get this stations data
     async function getStationData(stationIds, stationCounter) {
@@ -446,6 +447,7 @@ async function fetchStationData(data) {
                 `${stationCounter} Data fetched and inserted for ${stationId}`
             );
 
+            console.time("got-buoys");
             //lets limit this to 10
             let stationDataPoints = 0;
             for (let time in stationData) {
@@ -461,10 +463,12 @@ async function fetchStationData(data) {
 
                 await parseAndInsertData(data);
             }
+            console.timeEnd("got-buoys");
         }
 
         stationCounter++;
         if (stationCounter < stationIds.length) {
+            console.log("starting timer for next");
             setTimeout(async () => {
                 await getStationData(stationIds, stationCounter);
             }, timePer);
