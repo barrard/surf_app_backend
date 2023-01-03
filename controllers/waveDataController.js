@@ -457,7 +457,7 @@ async function fetchStationData(data) {
                 data.LON = LON;
                 data.id = stationId;
                 stationDataPoints++;
-                if (stationDataPoints > 10) {
+                if (stationDataPoints > 5) {
                     break;
                 }
 
