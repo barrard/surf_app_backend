@@ -33,110 +33,102 @@ async function fetchStation(stationId) {
 
     const $ = cheerio.load(station_list_data);
 
-    const children = $("#data").children();
-    let firstDataTable = false;
+    const weatherData = $("#wxdata").children();
+    const waveData = $("#wavedata").children();
+
     let currentConditions = {};
 
     let swellSummary = {};
     const dataArray = [];
-    let tableCount = 0;
-    let startingMonth, startingDay, startingHour, startingYear;
-    Array.from(children).forEach((child) => {
-        // console.log(child.name);
-        //this will get the most current conditions
-        let isTable = child.name === "table";
-        if (isTable) {
-            tableCount++;
-        }
-        // console.log({ tableCount });
-        if (isTable && tableCount === 1 && !firstDataTable) {
-            firstDataTable = true;
-            //get the data from the first table
-            const children = $(child).children();
 
-            currentConditions = getCurrentConditions(children);
-            startingMonth = currentConditions.MM;
-            startingDay = currentConditions.DD;
-            startingHour = currentConditions.hour;
-            startingYear = currentConditions.year;
-            dataArray.push(currentConditions);
-        }
-        if (child.name === "table") {
-            const className = $(child).attr("class");
-            if (className === "dataTable") {
-                const rows = $("tr", "tbody", child);
+    getRowDataFromTable(weatherData);
+    getRowDataFromTable(waveData);
 
-                const keys = [];
-
-                Array.from(rows).forEach((row, i) => {
-                    let previousData = null;
-                    if (i === 0) {
-                        return; // this is a graph row we dont care about
-                    } else if (i === 1) {
-                        //this is the legend
-                        //get legend
-                        let th = $("th", row);
-
-                        Array.from(th).forEach((header) => {
-                            let key;
-                            const html = $(header).html();
-
-                            if (html.includes("<br>")) {
-                                key = html.split("<br>")[0];
-                            } else {
-                                key = html;
-                            }
-
-                            // console.log(key);
-                            keys.push(key);
-                        });
-                    } else {
-                        previousData = {};
-                        //this is the actual data
-                        let td = $("td", row);
-                        previousData["year"] = startingYear;
-
-                        Array.from(td).forEach((tData, i) => {
-                            let val;
-                            const labelName = keys[i];
-                            const html = $(tData).html();
-                            // console.log(html);
-                            if (html === "-") return;
-                            //time looks like 3:20&#xA0;am
-                            else if (html.includes("&#xA0")) {
-                                const [_val] = html.split("&#xA0;");
-
-                                const currHour = _val.slice(0, 2);
-                                const currMin = _val.slice(2);
-
-                                previousData["Hour"] = currHour;
-                                previousData["Min"] = currMin;
-                                return;
-                            } else {
-                                val = html;
-                            }
-                            if (labelName === "MM" && val > startingMonth) {
-                                startingMonth = val;
-
-                                startingYear--;
-                                previousData["year"] = startingYear;
-                            }
-                            previousData[labelName] = val;
-                        });
-                    }
-                    if (previousData) {
-                        dataArray.push(previousData);
-                    }
-                });
-            } else if (tableCount === 4) {
-                //wave summary data
+    function getRowDataFromTable(table) {
+        let tableCount = 0;
+        Array.from(table).forEach((child) => {
+            // console.log(child.name);
+            //this will get the most current conditions
+            let isTable = child.name === "table";
+            if (isTable) {
+                tableCount++;
+            }
+            // console.log({ tableCount });
+            if (isTable && tableCount === 1) {
+                firstDataTable = true;
+                //get the data from the first table
                 const children = $(child).children();
 
                 currentConditions = getCurrentConditions(children);
+
                 dataArray.push(currentConditions);
             }
-        }
-    });
+            if (child.name === "div") {
+                const className = $(child).attr("class");
+                if (className === "dataTable-wrapper") {
+                    const rows = $("tr", "table", child);
+
+                    const keys = [];
+
+                    Array.from(rows).forEach((row, i) => {
+                        let currentData = null;
+                        //this is the legend
+                        //get legend
+                        if (i === 0) {
+                            let th = $("th", row);
+
+                            Array.from(th).forEach((header) => {
+                                let key;
+                                const html = $(header).html();
+
+                                if (html.includes("<br>")) {
+                                    key = html.split("<br>");
+                                    if (key.length === 3) {
+                                        key = key[1];
+                                    } else if (key.length === 2) {
+                                        key = key[0];
+                                    }
+                                } else {
+                                    throw new Error("Fix dis bug");
+                                }
+
+                                keys.push(key);
+                            });
+                        } else {
+                            currentData = {};
+                            //this is the actual data
+                            let td = $("td", row);
+                            let th = $("th", row);
+                            let datetime = $(th).text();
+                            let [date, time] = datetime.split(" ");
+                            let [year, month, day] = date.split("-");
+                            let hour = time.slice(0, 2);
+                            let min = time.slice(-2);
+                            currentData["year"] = year;
+                            currentData["MM"] = month;
+                            currentData["DD"] = day;
+                            currentData["Hour"] = hour;
+                            currentData["Min"] = min;
+                            Array.from(td).forEach((tData, i) => {
+                                let val;
+                                const labelName = keys[i + 1];
+                                const html = $(tData).text().trim();
+                                // console.log(html);
+                                if (html === "-") return;
+
+                                val = html;
+
+                                currentData[labelName] = val;
+                            });
+                        }
+                        if (currentData) {
+                            dataArray.push(currentData);
+                        }
+                    });
+                }
+            }
+        });
+    }
 
     // console.log(dataArray);
 
@@ -147,7 +139,7 @@ async function fetchStation(stationId) {
         let { Hour, Min, DD, MM, year } = data;
         const GMT_Date = `${DD} ${switchMonth(
             MM
-        )} ${year} ${Hour}:${Min}:${00} GMT`;
+        )} ${year} ${Hour}:${Min}:${"00"} GMT`;
         // console.log(GMT_Date);
         // console.log(new Date(GMT_Date).toLocaleString());
         const time = new Date(GMT_Date).getTime();
@@ -216,32 +208,30 @@ async function fetchStation(stationId) {
                         const rowData = $("td", row);
                         let labelName, val;
                         Array.from(rowData).forEach((data, i) => {
+                            // if (i === 0) {
+                            //this is a chart button
+                            // return;
+                            // } else {
+                            //this will be label and data
                             if (i === 0) {
-                                //this is a chart button
-                                return;
-                            } else {
-                                //this will be label and data
-                                if (i === 1) {
-                                    //label
-                                    const text = $(data).text();
-                                    //parse the label
-                                    const [_, labelValueDirty] =
-                                        text.split("(");
-                                    if (!labelValueDirty) return;
-                                    const [_labelName] =
-                                        labelValueDirty.split(")");
-                                    labelName = _labelName;
-                                    currentConditions[labelName] = "";
-                                } else if (i === 2) {
-                                    //value
-                                    const value = $(data).text();
-                                    const [_val] = value.trim().split(" ");
-                                    val = _val;
-                                    if (!labelName) return;
+                                //label
+                                const text = $(data).text();
+                                //parse the label
+                                const [_, labelValueDirty] = text.split("(");
+                                if (!labelValueDirty) return;
+                                const [_labelName] = labelValueDirty.split(")");
+                                labelName = _labelName;
+                                currentConditions[labelName] = "";
+                            } else if (i === 1) {
+                                //value
+                                const value = $(data).text();
+                                const [_val] = value.trim().split(" ");
+                                val = _val;
+                                if (!labelName) return;
 
-                                    currentConditions[labelName] = val;
-                                }
+                                currentConditions[labelName] = val;
                             }
+                            // }
                         });
                     }
                 });
@@ -273,8 +263,8 @@ async function get_nearby_stations({ lat1, lng1 }, time) {
 
     spans.map((index, span) => {
         /* Each station has an href and a background color */
-        const station_link = $(span.children).attr("href");
-        const bg_color = $(span).css("background-color");
+        const station_link = $(span).find("a").attr("href");
+        const bg_color = $(span).hasClass("data-row");
 
         if (station_link && bg_color) {
             const station_data = $(span).text();
