@@ -2,12 +2,23 @@
 const waveDataService = require("../services/waveDataService.js");
 const BuoyModel = require("../models/BuoyModel.js");
 
-const { HAWAII, PNW, LA, AK, USER_LOC } = require("../utils/locs");
+const { HAWAII, PNW, LA, AK, USER_LOC, FL, MA } = require("../utils/locs");
 
 let recentlyFetched = {};
+let b = {};
 
 let cacheData = false;
-setInterval(() => {
+setTimeout(async () => {
+    console.log("Get initial b data");
+    const _b = await findBuoysNear();
+    b = cleanBuoyData(_b);
+}, 1000 * 60);
+
+setInterval(async () => {
+    console.log("Get interval b data");
+
+    const _b = await findBuoysNear();
+    b = cleanBuoyData(_b);
     cacheData = false;
 }, 1000 * 60 * 10);
 
@@ -22,7 +33,6 @@ module.exports = {
 
 const _1Min = 1000 * 60;
 const _5Min = _1Min * 5;
-const _20Mins = _1Min * 20;
 const _20Min = _1Min * 20;
 
 const MIN_6_Timeout = _1Min * 6;
@@ -31,21 +41,35 @@ const ZERO_Timeout = 0; //_1Min * 5;
 
 setInterval(() => {
     recentlyFetched = {};
-}, _20Min);
+}, _20Min * 2);
 // Calls the method to watch a spot, e.i. hawaii
-// trackLA();
+
+//FL : 22 min
+//MA : 18 min
+//PNW : 10min
+//AK : 7 min
+//LA : 6 min
+// HI : 1 min
+
 setTimeout(() => {
     trackLA();
     setInterval(() => {
         trackLA();
-    }, _20Mins);
-}, MIN_16_Timeout); //call every 15 mins
+    }, _20Min * 2);
+}, _20Min * 2); //call every 15 mins
 
 setTimeout(() => {
-    trackHawaii();
+    // trackLA();
+    trackFlorida();
+    // trackPacificNorthWest();
     setInterval(() => {
-        trackHawaii();
-    }, _20Mins);
+        // trackAK();
+        trackFlorida();
+    }, _20Min + _5Min * 2);
+
+    setInterval(() => {
+        trackMassachusetts();
+    }, _20Min * 2);
 }, ZERO_Timeout); //call every 15 mins
 
 //wait 5 minutes and call pnw
@@ -53,12 +77,15 @@ setTimeout(() => {
     trackPacificNorthWest();
     setInterval(() => {
         trackPacificNorthWest();
-    }, _20Mins);
-}, MIN_6_Timeout);
+    }, _20Min + _5Min);
+    setInterval(() => {
+        trackAK();
+    }, _20Min);
+}, _20Min + _5Min);
 
 setInterval(() => {
-    trackAK();
-}, _20Mins);
+    trackHawaii();
+}, MIN_16_Timeout);
 
 async function insertBuoyData(data) {
     try {
@@ -117,7 +144,8 @@ async function getBuoyData(stationId) {
     data = cleanBuoyData(data);
     return data;
 }
-async function findBuoysNear({ lat, lng }) {
+async function findBuoysNear(args = {}) {
+    const { lat, lng } = args;
     console.time("getBouysByDistance");
     //TIME
     const TIME = 1000 * 60 * 60 * 2;
@@ -153,49 +181,51 @@ async function getGroupLocations(req, res) {
 }
 
 async function getNearByBuoys(req, res) {
-    const { lat, lng } = req.params;
+    // const { lat, lng } = req.params;
 
-    const RANGE = USER_LOC.radius;
-    let buoys;
+    // const RANGE = USER_LOC.radius;
+    // let buoys;
 
-    //is hawaii
-    const isHAWAII =
-        calcCrow({
-            lat1: HAWAII.lat,
-            lon1: HAWAII.lng,
-            lat2: lat,
-            lon2: lng,
-        }) < RANGE;
+    // //is hawaii
+    // const isHAWAII =
+    //     calcCrow({
+    //         lat1: HAWAII.lat,
+    //         lon1: HAWAII.lng,
+    //         lat2: lat,
+    //         lon2: lng,
+    //     }) < RANGE;
 
-    // is PNW
-    const isPNW =
-        calcCrow({
-            lat1: PNW.lat,
-            lon1: PNW.lng,
-            lat2: lat,
-            lon2: lng,
-        }) < RANGE;
+    // // is PNW
+    // const isPNW =
+    //     calcCrow({
+    //         lat1: PNW.lat,
+    //         lon1: PNW.lng,
+    //         lat2: lat,
+    //         lon2: lng,
+    //     }) < RANGE;
 
-    // is LA
-    const isLA =
-        calcCrow({
-            lat1: LA.lat,
-            lon1: LA.lng,
-            lat2: lat,
-            lon2: lng,
-        }) < RANGE;
+    // // is LA
+    // const isLA =
+    //     calcCrow({
+    //         lat1: LA.lat,
+    //         lon1: LA.lng,
+    //         lat2: lat,
+    //         lon2: lng,
+    //     }) < RANGE;
 
-    if (isHAWAII) {
-        buoys = await getHawaiiBuoys();
-    } else if (isPNW) {
-        buoys = await getNearPNW();
-    } else if (isLA) {
-        buoys = await getNearLA();
-    }
+    // if (isHAWAII) {
+    //     buoys = await getHawaiiBuoys();
+    // } else if (isPNW) {
+    //     buoys = await getNearPNW();
+    // } else if (isLA) {
+    //     buoys = await getNearLA();
+    // } else {
+    //     buoys = await getNearPNW()();
+    // }
 
-    console.log({ isHAWAII, isPNW, isLA });
+    // console.log({ isHAWAII, isPNW, isLA });
 
-    return res.json(buoys);
+    return res.json(b);
 }
 
 //This function takes in latitude and longitude of two location and returns the distance between them as the crow flies (in km)
@@ -400,6 +430,22 @@ async function trackPacificNorthWest() {
     fetchStationData(data);
 }
 
+async function trackFlorida() {
+    console.log(
+        "~~~~~~~~~~~~~~   Tracking   |     FLORIDA   |     Buoys   ~~~~~~~~~~~~~~"
+    );
+    const { lat, lng } = FL;
+    const data = await waveDataService.getWaveData(lat, lng, 2);
+    fetchStationData(data);
+}
+async function trackMassachusetts() {
+    console.log(
+        "~~~~~~~~~~~~~~   Tracking   |     Massachusetts   |     Buoys   ~~~~~~~~~~~~~~"
+    );
+    const { lat, lng } = MA;
+    const data = await waveDataService.getWaveData(lat, lng, 2);
+    fetchStationData(data);
+}
 async function trackHawaii() {
     console.log(
         "~~~~~~~~~~~~~~   Tracking   |     HAWAII   |     Buoys   ~~~~~~~~~~~~~~"
@@ -428,50 +474,59 @@ async function fetchStationData(data) {
             (stationCount * timePer) / 1000 / 60
         } Minutes`
     );
-
-    await getStationData(stationIds, stationCounter);
-    console.log("Done Buoys");
+    try {
+        await getStationData(stationIds, stationCounter);
+        console.log("Done Buoys");
+    } catch (err) {
+        console.log(err);
+    }
 
     //get this stations data
     async function getStationData(stationIds, stationCounter) {
         const stationId = stationIds[stationCounter];
 
-        const { LAT, LON } = cleanedData[stationId];
-        if (recentlyFetched[stationId]) {
-            console.log(`Recently got ${stationId}`);
-        } else {
-            recentlyFetched[stationId] = true;
+        try {
+            const { LAT, LON } = cleanedData[stationId];
+            if (recentlyFetched[stationId]) {
+                console.log(`Recently got ${stationId}`);
+            } else {
+                recentlyFetched[stationId] = true;
 
-            const stationData = await waveDataService.fetchStation(stationId);
-            console.log(
-                `${stationCounter} Data fetched and inserted for ${stationId}`
-            );
+                const stationData = await waveDataService.fetchStation(
+                    stationId
+                );
+                console.log(
+                    `${stationCounter} Data fetched and inserted for ${stationId}`
+                );
 
-            console.time("got-buoys");
-            //lets limit this to 10
-            let stationDataPoints = 0;
-            for (let time in stationData) {
-                let data = stationData[time];
-                data.GMT = new Date(parseInt(time)).toUTCString();
-                data.LAT = LAT;
-                data.LON = LON;
-                data.id = stationId;
-                stationDataPoints++;
-                if (stationDataPoints > 5) {
-                    break;
+                console.time("got-buoys");
+                //lets limit this to 10
+                let stationDataPoints = 0;
+                for (let time in stationData) {
+                    let data = stationData[time];
+                    data.GMT = new Date(parseInt(time)).toUTCString();
+                    data.LAT = LAT;
+                    data.LON = LON;
+                    data.id = stationId;
+                    stationDataPoints++;
+                    if (stationDataPoints > 5) {
+                        break;
+                    }
+
+                    await parseAndInsertData(data);
                 }
-
-                await parseAndInsertData(data);
+                console.timeEnd("got-buoys");
             }
-            console.timeEnd("got-buoys");
-        }
 
-        stationCounter++;
-        if (stationCounter < stationIds.length) {
-            console.log("starting timer for next");
-            setTimeout(async () => {
-                await getStationData(stationIds, stationCounter);
-            }, timePer);
+            stationCounter++;
+            if (stationCounter < stationIds.length) {
+                console.log("starting timer for next");
+                setTimeout(async () => {
+                    await getStationData(stationIds, stationCounter);
+                }, timePer);
+            }
+        } catch (err) {
+            console.log(err);
         }
     }
 }

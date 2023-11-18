@@ -16,6 +16,7 @@ const origin_whitelist = [
     "http://localhost:3000",
     "http://localhost:3003",
     "http://localhost:3004",
+    "http://192.168.1.47:3004",
     "https://surfbuoys.com",
     "https://waves.dakine.website",
     "https://waves.raveaboutdave.com",
