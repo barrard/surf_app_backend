@@ -487,10 +487,7 @@ async function fetchStationData(data) {
     }
 
     function addToCache(data) {
-        if (!b[data.stationId]) {
-            b[data.stationId] = [];
-        }
-        b[data.stationId].push(data);
+        b[data.stationId] = data;
     }
 
     //get this stations data
