@@ -487,7 +487,11 @@ async function fetchStationData(data) {
     }
 
     function addToCache(data) {
-        b[data.stationId] = data;
+        if (Array.isArray(data)) {
+            b[data.stationId] = data;
+        } else {
+            b[data.stationId] = [data];
+        }
     }
 
     //get this stations data
