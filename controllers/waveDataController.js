@@ -126,6 +126,10 @@ async function insertBuoyData(data) {
                 windDir,
                 windGust,
                 windSpeed,
+                salinity,
+                visibility,
+                pressure,
+                pressureTendency,
                 coords: { type: "Point", coordinates: [LON, LAT] },
             },
             { upsert: true, new: true, lean: true }
@@ -609,16 +613,22 @@ async function parseAndInsertData(data) {
 }
 
 function getPressure(data) {
-    return getData("PRES", data);
+    const pres = getData("PRES", data);
+
+    return pres;
 }
 function getPressureTendency(data) {
     return getData("PTDY", data);
 }
 function getSalinity(data) {
-    return getData("SAL", data);
+    const sal = getData("SAL", data);
+
+    return sal;
 }
 function getVisibility(data) {
-    return getData("VIS", data);
+    const vis = getData("VIS", data);
+
+    return vis;
 }
 function getTide(data) {
     return getData("TIDE", data);
