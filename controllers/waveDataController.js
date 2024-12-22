@@ -83,7 +83,7 @@ setTimeout(() => {
     }, _20Min);
 }, _20Min + _5Min);
 
-setInterval(() => {
+setTimeout(() => {
     trackHawaii();
 }, MIN_16_Timeout);
 
@@ -524,6 +524,7 @@ async function fetchStationData(data) {
 
                 console.time("got-buoys");
                 //lets limit this to 10
+                let prevData = {};
                 let stationDataPoints = 0;
                 for (let time in stationData) {
                     let data = stationData[time];
@@ -537,7 +538,8 @@ async function fetchStationData(data) {
                     }
 
                     const cleanBuoyData = await parseAndInsertData(data);
-                    addToCache(cleanBuoyData);
+                    addToCache({ ...cleanBuoyData, ...prevData });
+                    prevData = cleanBuoyData;
                 }
                 console.timeEnd("got-buoys");
             }
