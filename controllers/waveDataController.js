@@ -90,6 +90,10 @@ setInterval(() => {
 async function insertBuoyData(data) {
     try {
         const {
+            salinity,
+            visibility,
+            pressure,
+            pressureTendency,
             stationId,
             airTemp,
             GMT,
@@ -571,31 +575,51 @@ function cleanData(data) {
 async function parseAndInsertData(data) {
     const cleanStationData = {};
 
-    let time = getTime(data);
+    try {
+        let time = getTime(data);
 
-    // if (!cleanStationData[time]) cleanStationData[time] = {};
-    cleanStationData.stationId = data.id;
-    cleanStationData.LAT = data.LAT;
-    cleanStationData.LON = data.LON;
-    cleanStationData.GMT = new Date(time).getTime();
+        // if (!cleanStationData[time]) cleanStationData[time] = {};
+        cleanStationData.stationId = data.id;
+        cleanStationData.LAT = data.LAT;
+        cleanStationData.LON = data.LON;
+        cleanStationData.GMT = new Date(time).getTime();
 
-    // console.log(station);
-    cleanStationData.period = getPeriod(data);
-    cleanStationData.height = getWaveHeight(data);
-    cleanStationData.swellDir = getSwellDir(data);
+        // console.log(station);
+        cleanStationData.period = getPeriod(data);
+        cleanStationData.height = getWaveHeight(data);
+        cleanStationData.swellDir = getSwellDir(data);
 
-    cleanStationData.windSpeed = getWindSpeed(data);
-    cleanStationData.windGust = getWindGust(data);
-    cleanStationData.windDir = getWindDir(data);
+        cleanStationData.windSpeed = getWindSpeed(data);
+        cleanStationData.windGust = getWindGust(data);
+        cleanStationData.windDir = getWindDir(data);
 
-    cleanStationData.airTemp = getAirTemp(data);
-    cleanStationData.waterTemp = getWaterTemp(data);
-    cleanStationData.tide = getTide(data);
+        cleanStationData.airTemp = getAirTemp(data);
+        cleanStationData.waterTemp = getWaterTemp(data);
+        cleanStationData.tide = getTide(data);
+        cleanStationData.pressure = getPressure(data);
+        cleanStationData.pressureTendency = getPressureTendency(data);
+        cleanStationData.salinity = getSalinity(data);
+        cleanStationData.visibility = getVisibility(data);
 
-    const saveCleanStationData = await insertBuoyData(cleanStationData);
-    return saveCleanStationData;
+        const saveCleanStationData = await insertBuoyData(cleanStationData);
+        return saveCleanStationData;
+    } catch (err) {
+        console.error(err);
+    }
 }
 
+function getPressure(data) {
+    return getData("PRES", data);
+}
+function getPressureTendency(data) {
+    return getData("PTDY", data);
+}
+function getSalinity(data) {
+    return getData("SAL", data);
+}
+function getVisibility(data) {
+    return getData("VIS", data);
+}
 function getTide(data) {
     return getData("TIDE", data);
 }

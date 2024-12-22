@@ -19,6 +19,10 @@ const BuoyData = mongoose.Schema(
         airTemp: { type: String },
         waterTemp: { type: String },
         tide: { type: String },
+        pressure: { type: String },
+        pressureTendency: { type: String },
+        salinity: { type: String },
+        visibility: { type: String },
     },
     { timestamps: true }
 );
