@@ -490,7 +490,9 @@ async function fetchStationData(data) {
         if (Array.isArray(data)) {
             b[data.stationId] = data;
         } else {
-            b[data.stationId] = [data];
+            const current =
+                b[data.stationId] != undefined ? b[data.stationId] : {};
+            b[data.stationId] = [{ ...data, ...current }];
         }
     }
 
