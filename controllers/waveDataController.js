@@ -483,7 +483,7 @@ async function fetchStationData(data) {
     // let count = 0;
     const stationCount = Object.keys(cleanedData).length;
     console.log(
-        `Collecting ${stationCount} data in ${
+        `Collecting ${stationCount} buoys in ${
             (stationCount * timePer) / 1000 / 60
         } Minutes`
     );
@@ -500,7 +500,7 @@ async function fetchStationData(data) {
         } else {
             const current =
                 b[data.stationId] != undefined ? b[data.stationId] : {};
-            b[data.stationId] = [{ ...data, ...current }];
+            b[data.stationId] = [{ ...data, ...current, GMT: data.GMT }];
         }
     }
 
@@ -522,26 +522,27 @@ async function fetchStationData(data) {
                     `${stationCounter} Data fetched and inserted for ${stationId}`
                 );
 
-                console.time("got-buoys");
+                console.time("got-buoys-" + stationId);
                 //lets limit this to 10
                 let prevData = {};
                 let stationDataPoints = 0;
-                for (let time in stationData) {
+                const sortedTimes = Object.keys(stationData).sort(
+                    (a, b) => a - b
+                );
+                sortedTimes.slice(-6).forEach(async (time, index) => {
+                    // for (let time in ) {
                     let data = stationData[time];
                     data.GMT = new Date(parseInt(time)).toUTCString();
                     data.LAT = LAT;
                     data.LON = LON;
                     data.id = stationId;
-                    stationDataPoints++;
-                    if (stationDataPoints > 5) {
-                        break;
-                    }
 
                     const cleanBuoyData = await parseAndInsertData(data);
                     addToCache({ ...cleanBuoyData, ...prevData });
                     prevData = cleanBuoyData;
-                }
-                console.timeEnd("got-buoys");
+                });
+                // }
+                console.timeEnd("got-buoys-" + stationId);
             }
 
             stationCounter++;
@@ -563,12 +564,15 @@ function cleanData(data) {
     const cleanData = {};
     for (let id in station_id_obj) {
         const station = station_id_obj[id];
-        if (!cleanData[id]) cleanData[id] = {};
+        if (!cleanData[id]) {
+            cleanData[id] = {};
+        }
+
         const cleanStationData = cleanData[id];
-        let startingHour;
-        let GMT = new Date().toUTCString();
-        let [weekday, day, month, year, time, timezone] = GMT.split(" ");
-        let [hour, minute, seconds] = time.split(":");
+        // let startingHour;
+        // let GMT = new Date().toUTCString();
+        // let [weekday, day, month, year, time, timezone] = GMT.split(" ");
+        // let [hour, minute, seconds] = time.split(":");
         station.forEach(async (data) => {
             cleanStationData.LAT = data.LAT;
             cleanStationData.LON = data.LON;
