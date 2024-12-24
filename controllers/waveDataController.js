@@ -280,107 +280,107 @@ function cleanBuoyData(buoys) {
         );
     }
 
-    //Fill in data
-    for (let stationId in buoys) {
-        const data = buoys[stationId];
-        // buoys[stationId] = buoys[stationId].map((spot) => {
-        const keys = Object.keys(data[0]);
+    // //Fill in data
+    // for (let stationId in buoys) {
+    //     const data = buoys[stationId];
+    //     // buoys[stationId] = buoys[stationId].map((spot) => {
+    //     const keys = Object.keys(data[0]);
 
-        keys.forEach((key) => {
-            let lastValue = undefined;
-            let lastIndex;
-            let nullCount = 0;
-            data.forEach((reading, readingIndex) => {
-                const value = reading[key];
-                let _isNan = false;
+    //     keys.forEach((key) => {
+    //         let lastValue = undefined;
+    //         let lastIndex;
+    //         let nullCount = 0;
+    //         data.forEach((reading, readingIndex) => {
+    //             const value = reading[key];
+    //             let _isNan = false;
 
-                //first time through
-                if (lastValue === undefined) {
-                    lastValue = value;
-                    lastIndex = readingIndex;
-                }
-                //first few times this may happen
-                if (value === null && lastValue === null) {
-                    nullCount++;
-                }
-                //this is what we really care about
-                else if (value === null) {
-                    nullCount++;
-                }
-                if (value) {
-                    if (nullCount && !_isNan) {
-                        // console.log("we need to backFill");
+    //             //first time through
+    //             if (lastValue === undefined) {
+    //                 lastValue = value;
+    //                 lastIndex = readingIndex;
+    //             }
+    //             //first few times this may happen
+    //             if (value === null && lastValue === null) {
+    //                 nullCount++;
+    //             }
+    //             //this is what we really care about
+    //             else if (value === null) {
+    //                 nullCount++;
+    //             }
+    //             if (value) {
+    //                 if (nullCount && !_isNan) {
+    //                     // console.log("we need to backFill");
 
-                        //started with null, make all last values the only known value
-                        if (lastValue === null && lastIndex === 0) {
-                            for (let x = 0; x < nullCount; x++) {
-                                data[x][key] = value;
-                            }
-                            // console.log(data);
-                        } else {
-                            // console.log("We got here!");
-                            let diff = value - (lastValue || value);
-                            if (isNaN(diff)) {
-                                // console.log(value);
-                                diff = value || lastValue;
-                            }
+    //                     //started with null, make all last values the only known value
+    //                     if (lastValue === null && lastIndex === 0) {
+    //                         for (let x = 0; x < nullCount; x++) {
+    //                             data[x][key] = value;
+    //                         }
+    //                         // console.log(data);
+    //                     } else {
+    //                         // console.log("We got here!");
+    //                         let diff = value - (lastValue || value);
+    //                         if (isNaN(diff)) {
+    //                             // console.log(value);
+    //                             diff = value || lastValue;
+    //                         }
 
-                            const delta = diff / (nullCount + 1);
+    //                         const delta = diff / (nullCount + 1);
 
-                            for (
-                                let x = readingIndex - nullCount;
-                                x < readingIndex;
-                                x++
-                            ) {
-                                const newValue = isNaN(lastValue + delta)
-                                    ? lastValue
-                                    : lastValue + delta;
-                                data[x][key] = newValue;
-                                lastValue = newValue;
-                            }
-                            // console.log(data);
-                        }
-                        if (lastValue === NaN) {
-                            console.log("got nan");
-                        }
-                        lastIndex = readingIndex;
-                        nullCount = 0;
-                    } else if (nullCount) {
-                        for (
-                            let x = readingIndex - nullCount;
-                            x < readingIndex;
-                            x++
-                        ) {
-                            data[x][key] = lastValue;
-                            lastValue = value;
-                        }
-                        nullCount = 0;
-                    }
+    //                         for (
+    //                             let x = readingIndex - nullCount;
+    //                             x < readingIndex;
+    //                             x++
+    //                         ) {
+    //                             const newValue = isNaN(lastValue + delta)
+    //                                 ? lastValue
+    //                                 : lastValue + delta;
+    //                             data[x][key] = newValue;
+    //                             lastValue = newValue;
+    //                         }
+    //                         // console.log(data);
+    //                     }
+    //                     if (lastValue === NaN) {
+    //                         console.log("got nan");
+    //                     }
+    //                     lastIndex = readingIndex;
+    //                     nullCount = 0;
+    //                 } else if (nullCount) {
+    //                     for (
+    //                         let x = readingIndex - nullCount;
+    //                         x < readingIndex;
+    //                         x++
+    //                     ) {
+    //                         data[x][key] = lastValue;
+    //                         lastValue = value;
+    //                     }
+    //                     nullCount = 0;
+    //                 }
 
-                    lastValue = parseFloat(value);
-                    if (isNaN(lastValue)) {
-                        _isNan = true;
-                        lastValue = value;
-                    }
-                    lastIndex = readingIndex;
-                }
-                if (
-                    nullCount &&
-                    readingIndex === data.length - 1 &&
-                    lastValue !== null
-                ) {
-                    for (
-                        let x = readingIndex - nullCount;
-                        x <= readingIndex;
-                        x++
-                    ) {
-                        data[x][key] = lastValue;
-                    }
-                }
-            });
-        });
-        // });
-    }
+    //                 lastValue = parseFloat(value);
+    //                 if (isNaN(lastValue)) {
+    //                     _isNan = true;
+    //                     lastValue = value;
+    //                 }
+    //                 lastIndex = readingIndex;
+    //             }
+    //             if (
+    //                 nullCount &&
+    //                 readingIndex === data.length - 1 &&
+    //                 lastValue !== null
+    //             ) {
+    //                 for (
+    //                     let x = readingIndex - nullCount;
+    //                     x <= readingIndex;
+    //                     x++
+    //                 ) {
+    //                     data[x][key] = lastValue;
+    //                 }
+    //             }
+    //         });
+    //     });
+    //     // });
+    // }
     return buoys;
 }
 
@@ -496,11 +496,18 @@ async function fetchStationData(data) {
 
     function addToCache(data) {
         if (Array.isArray(data)) {
-            b[data.stationId] = data;
+            throw new Error("Data is an array is depreciated, try again");
+            // b[data.stationId] = data;
+        }
+        if (!b[data.stationId]) {
+            b[data.stationId] = [];
+        }
+        if (!b[data.stationId].length) {
+            b[data.stationId].push(data);
         } else {
-            const current =
-                b[data.stationId] != undefined ? b[data.stationId] : {};
-            b[data.stationId] = [{ ...data, ...current, GMT: data.GMT }];
+            const current = b[data.stationId].slice(-1)[0];
+            b[data.stationId].push({ ...data, ...current, GMT: data.GMT });
+            b[data.stationId] = b[data.stationId].slice(-10);
         }
     }
 
@@ -524,12 +531,13 @@ async function fetchStationData(data) {
 
                 console.time("got-buoys-" + stationId);
                 //lets limit this to 10
-                let prevData = {};
+                // let prevData = {};
                 let stationDataPoints = 0;
                 const sortedTimes = Object.keys(stationData).sort(
                     (a, b) => a - b
                 );
-                sortedTimes.slice(-6).forEach(async (time, index) => {
+                sortedTimes.forEach(async (time, index) => {
+                    // sortedTimes.slice(-60).forEach(async (time, index) => {
                     // for (let time in ) {
                     let data = stationData[time];
                     data.GMT = new Date(parseInt(time)).toUTCString();
@@ -538,8 +546,8 @@ async function fetchStationData(data) {
                     data.id = stationId;
 
                     const cleanBuoyData = await parseAndInsertData(data);
-                    addToCache({ ...cleanBuoyData, ...prevData });
-                    prevData = cleanBuoyData;
+                    addToCache(cleanBuoyData);
+                    // prevData = cleanBuoyData;
                 });
                 // }
                 console.timeEnd("got-buoys-" + stationId);
