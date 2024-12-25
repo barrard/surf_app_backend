@@ -56,6 +56,9 @@ function addUserHistory(req, res) {
         if (!req.cookies) {
             console.log("this one no cookies");
             return;
+        } else {
+            console.log("this one no cookies");
+            return;
         }
         var places = req.cookies.places;
 

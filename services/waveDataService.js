@@ -133,7 +133,7 @@ async function fetchStation(stationId) {
     // console.log(dataArray);
 
     const timeDateObj = {};
-    dataArray.forEach((data) => {
+    dataArray.reverse().forEach((data) => {
         //get the GMT time
         // console.log(data);
         let { Hour, Min, DD, MM, year } = data;
