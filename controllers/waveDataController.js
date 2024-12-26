@@ -83,7 +83,7 @@ setTimeout(() => {
     }, _20Min);
 }, _20Min + _5Min);
 
-setTimeout(() => {
+setInterval(() => {
     trackHawaii();
 }, MIN_16_Timeout);
 
