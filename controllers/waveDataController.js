@@ -191,7 +191,48 @@ async function getGroupLocations(req, res) {
     res.json({ HAWAII, PNW, LA, AK, USER_LOC });
 }
 
+function addUserHistory(req, res) {
+    try {
+        let { lat, lng } = req.params;
+        lat = parseFloat(lat).toFixed(3);
+        lng = parseFloat(lng).toFixed(3);
+        console.log(req.ip);
+
+        res.header(
+            "Access-Control-Allow-Headers",
+            "Origin, X-Requested-With, Content-Type, Accept"
+        );
+
+        // if (!req.cookies) {
+        //     console.log("this one no cookies");
+        //     return;
+        // } else {
+        //     console.log("this one no cookies");
+        //     return;
+        // }
+        var places = req.cookies.places;
+
+        if (!places) places = JSON.stringify({});
+
+        places = JSON.parse(places);
+        console.log(" ---------   Cookies    ---------");
+        console.log(req.cookies);
+        if (!places[`${lat},${lng}`]) places[`${lat},${lng}`] = 0;
+        places[`${lat},${lng}`]++;
+        console.log(places);
+        res.cookie("places", JSON.stringify(places), {
+            maxAge: new Date().getTime() + 1000 * 60 * 60 * 24 * 700,
+            httpOnly: true,
+            secure: true,
+            // sameSite: "None",
+        });
+    } catch (err) {
+        console.log({ err });
+    }
+}
+
 async function getNearByBuoys(req, res) {
+    // addUserHistory(req, res);
     // const { lat, lng } = req.params;
 
     // const RANGE = USER_LOC.radius;
@@ -496,19 +537,24 @@ async function fetchStationData(data) {
 
     function addToCache(data) {
         if (Array.isArray(data)) {
-            throw new Error("Data is an array is depreciated, try again");
-            // b[data.stationId] = data;
+            // throw new Error("Data is an array is depreciated, try again");
+            b[data[0].stationId] = data;
         }
-        if (!b[data.stationId]) {
-            b[data.stationId] = [];
-        }
-        if (!b[data.stationId].length) {
-            b[data.stationId].push(data);
-        } else {
-            const current = b[data.stationId].slice(-1)[0];
-            b[data.stationId].push({ ...data, ...current, GMT: data.GMT });
-            b[data.stationId] = b[data.stationId].slice(-10);
-        }
+        // if (!b[data.stationId]) {
+        //     b[data.stationId] = [];
+        // }
+        // if (!b[data.stationId].length) {
+        //     b[data.stationId].push(data);
+        // } else {
+        //     const current = b[data.stationId].slice(-1)[0];
+        //     if (
+        //         new Date(current.GMT).getTime() >= new Date(data.GMT).getTime()
+        //     ) {
+        //         return;
+        //     }
+        //     b[data.stationId].push({ ...data, ...current, GMT: data.GMT });
+        //     b[data.stationId] = b[data.stationId].slice(-10);
+        // }
     }
 
     //get this stations data
@@ -536,19 +582,30 @@ async function fetchStationData(data) {
                 const sortedTimes = Object.keys(stationData).sort(
                     (a, b) => a - b
                 );
-                sortedTimes.forEach(async (time, index) => {
-                    // sortedTimes.slice(-60).forEach(async (time, index) => {
-                    // for (let time in ) {
-                    let data = stationData[time];
-                    data.GMT = new Date(parseInt(time)).toUTCString();
-                    data.LAT = LAT;
-                    data.LON = LON;
-                    data.id = stationId;
+                const allSavedData = [];
+                await Promise.all(
+                    sortedTimes.map(async (time, index) => {
+                        // sortedTimes.slice(-60).forEach(async (time, index) => {
+                        // for (let time in ) {
+                        let data = stationData[time];
+                        data.GMT = new Date(parseInt(time)).toUTCString();
+                        data.LAT = LAT;
+                        data.LON = LON;
+                        data.id = stationId;
 
-                    const cleanBuoyData = await parseAndInsertData(data);
-                    addToCache(cleanBuoyData);
-                    // prevData = cleanBuoyData;
-                });
+                        const cleanBuoyData = await parseAndInsertData(data);
+                        allSavedData.push(cleanBuoyData);
+                    })
+                );
+                const newSortedSlicedData = allSavedData
+                    .sort(
+                        (a, b) =>
+                            new Date(a.GMT).getTime() -
+                            new Date(b.GMT).getTime()
+                    )
+                    .slice(-10);
+                addToCache(newSortedSlicedData);
+
                 // }
                 console.timeEnd("got-buoys-" + stationId);
             }
