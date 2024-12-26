@@ -604,7 +604,19 @@ async function fetchStationData(data) {
                             new Date(b.GMT).getTime()
                     )
                     .slice(-10);
-                addToCache(newSortedSlicedData);
+                const mergedData = newSortedSlicedData.map((data, index) => {
+                    if (index === 0) {
+                        return data;
+                    }
+                    let prev = newSortedSlicedData[index - 1];
+                    const merged = {
+                        ...data,
+                        ...prev,
+                        GMT: data.GMT,
+                    };
+                    return merged;
+                });
+                addToCache(mergedData);
 
                 // }
                 console.timeEnd("got-buoys-" + stationId);
