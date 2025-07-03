@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const BuoyModel = require("../models/BuoyModel");
 
 async function removeCoordsInBatches(batchSize = 100) {
-    await mongoose.connect("mongodb://localhost:27017/surf_app");
+    await mongoose.connect("mongodb://0.0.0.0:27017/surf_app");
 
     const cursor = BuoyModel.find({ coords: { $exists: true } }).cursor();
 
