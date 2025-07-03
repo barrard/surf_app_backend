@@ -6,10 +6,10 @@ const BuoyData = mongoose.Schema(
         stationId: { type: String, required: true },
         GMT: { type: Date, required: true },
 
-        coords: {
-            type: pointSchema,
-            required: true,
-        },
+        // coords: {
+        //     type: pointSchema,
+        //     required: true,
+        // },
         period: { type: String },
         height: { type: String },
         swellDir: { type: String },

@@ -1,17 +1,17 @@
 const mongoose = require("mongoose");
-const BuoyData = require("./path/to/BuoyData");
+const BuoyModel = require("../models/BuoyModel");
 
 async function removeCoordsInBatches(batchSize = 100) {
-    await mongoose.connect("mongodb://localhost:27017/surf_buoy");
+    await mongoose.connect("mongodb://localhost:27017/surf_app");
 
-    const cursor = BuoyData.find({ coords: { $exists: true } }).cursor();
+    const cursor = BuoyModel.find({ coords: { $exists: true } }).cursor();
 
     let batch = [];
     for await (const doc of cursor) {
         batch.push(doc._id);
 
         if (batch.length >= batchSize) {
-            await BuoyData.updateMany(
+            await BuoyModel.updateMany(
                 { _id: { $in: batch } },
                 { $unset: { coords: 1 } }
             );
@@ -22,7 +22,7 @@ async function removeCoordsInBatches(batchSize = 100) {
 
     // process remaining docs
     if (batch.length > 0) {
-        await BuoyData.updateMany(
+        await BuoyModel.updateMany(
             { _id: { $in: batch } },
             { $unset: { coords: 1 } }
         );

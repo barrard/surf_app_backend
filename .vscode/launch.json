@@ -8,10 +8,9 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/bin/www"
+            "skipFiles": ["<node_internals>/**"],
+            // "program": "${workspaceFolder}/bin/www"
+            "program": "${workspaceFolder}/migrations/remveCoords-06-01-25.js"
         }
     ]
 }
