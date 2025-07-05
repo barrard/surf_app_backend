@@ -1,11 +1,18 @@
 /* Import the model and the service */
 const waveDataService = require("../services/waveDataService.js");
 const BuoyModel = require("../models/BuoyModel.js");
+const StationModel = require("../models/StationModel.js");
 
 const { HAWAII, PNW, LA, AK, USER_LOC, FL, MA } = require("../utils/locs");
 
 let recentlyFetched = {};
 let b = {};
+let fl_station = {};
+let ma_station = {};
+let hawaii_station = {};
+let ak_station = {};
+let pnw_station = {};
+let la_station = {};
 
 // let cacheData = false;
 // setTimeout(async () => {
@@ -59,9 +66,9 @@ setTimeout(() => {
 }, _20Min * 2); //call every 15 mins
 
 setTimeout(() => {
-    // trackLA();
     trackFlorida();
-    // trackPacificNorthWest();
+
+    // trackHawaii();
     setInterval(() => {
         // trackAK();
         trackFlorida();
@@ -463,6 +470,7 @@ async function trackAK() {
     console.log("~~~~~~~~~  Tracking  |   AK    |    Buoys  ~~~~~~~~~~~~~~");
     const { lat, lng } = AK;
     data = await waveDataService.getWaveData(lat, lng, 2);
+    updateStationTracker(ak_station, data, 10);
     fetchStationData(data);
 }
 
@@ -472,6 +480,7 @@ async function trackLA() {
     );
     const { lat, lng } = LA;
     data = await waveDataService.getWaveData(lat, lng, 2);
+    updateStationTracker(la_station, data, 10);
     fetchStationData(data);
 }
 
@@ -481,6 +490,7 @@ async function trackPacificNorthWest() {
     );
     const { lat, lng } = PNW;
     data = await waveDataService.getWaveData(lat, lng, 2);
+    updateStationTracker(pnw_station, data, 10);
     fetchStationData(data);
 }
 
@@ -490,6 +500,8 @@ async function trackFlorida() {
     );
     const { lat, lng } = FL;
     const data = await waveDataService.getWaveData(lat, lng, 2);
+    updateStationTracker(fl_station, data, 10);
+
     fetchStationData(data);
 }
 async function trackMassachusetts() {
@@ -498,6 +510,8 @@ async function trackMassachusetts() {
     );
     const { lat, lng } = MA;
     const data = await waveDataService.getWaveData(lat, lng, 2);
+    updateStationTracker(ma_station, data, 10);
+
     fetchStationData(data);
 }
 async function trackHawaii() {
@@ -506,7 +520,32 @@ async function trackHawaii() {
     );
     const { lat, lng } = HAWAII;
     const data = await waveDataService.getWaveData(lat, lng, 2);
+    updateStationTracker(hawaii_station, data, 10);
+
     fetchStationData(data);
+}
+
+function updateStationTracker(stationTracker, data, maxAge = 10) {
+    const stationIds = Object.keys(data.station_id_obj);
+    const prevStations = { ...stationTracker };
+    stationIds.forEach((stationId) => {
+        if (!stationTracker[stationId]) {
+            // New station
+            stationTracker[stationId] = 0;
+        }
+        if (prevStations[stationId]) {
+            delete prevStations[stationId];
+        }
+    });
+    if (Object.keys(prevStations).length) {
+        Object.keys(prevStations).forEach((stationId) => {
+            stationTracker[stationId]++;
+            if (stationTracker[stationId] > maxAge) {
+                delete stationTracker[stationId];
+                delete b[stationId];
+            }
+        });
+    }
 }
 
 async function fetchStationData(data) {
@@ -517,7 +556,7 @@ async function fetchStationData(data) {
         (stationId) => stationId
     );
 
-    const cleanedData = cleanData(data);
+    const cleanedData = await cleanData(data);
     // console.log(cleanedData);
     //fetch the stations
     let stationCounter = 0;
@@ -609,10 +648,18 @@ async function fetchStationData(data) {
                         return data;
                     }
                     let prev = newSortedSlicedData[index - 1];
-                    const merged = {
-                        ...data,
-                        ...prev,
-                        GMT: data.GMT,
+                    // Start with previous data
+                    let merged = { ...prev };
+                    // Only overwrite with defined values from current data
+                    Object.keys(data).forEach((key) => {
+                        if (data[key] !== undefined && data[key] !== null) {
+                            merged[key] = data[key];
+                        }
+                    });
+                    // Always set GMT to current data's GMT
+                    merged.GMT = data.GMT;
+                    merged.coords = {
+                        coordinates: [LON, LAT],
                     };
                     return merged;
                 });
@@ -635,7 +682,7 @@ async function fetchStationData(data) {
     }
 }
 
-function cleanData(data) {
+async function cleanData(data) {
     //get swell period
     const { station_id_obj, obshder_array } = data;
     const cleanData = {};
@@ -643,6 +690,20 @@ function cleanData(data) {
         const station = station_id_obj[id];
         if (!cleanData[id]) {
             cleanData[id] = {};
+        }
+
+        //check if station is in database
+        const stationModel = await StationModel.findOne({ stationId: id });
+
+        //if not, then make one
+        if (!stationModel) {
+            const { LAT, LON } = station[0];
+            const newStation = new StationModel({
+                stationId: id,
+                lat: LAT,
+                lng: LON,
+            });
+            await newStation.save();
         }
 
         const cleanStationData = cleanData[id];

@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const pointSchema = require("./PointModel");
+// const pointSchema = require("./PointModel");
 
 const BuoyData = mongoose.Schema(
     {
@@ -29,6 +29,6 @@ const BuoyData = mongoose.Schema(
 BuoyData.index({ stationId: 1, GMT: 1 });
 
 BuoyData.index({ createdAt: 1 });
-BuoyData.index({ coords: "2dsphere" });
+// BuoyData.index({ coords: "2dsphere" });
 
 module.exports = mongoose.model("BuoyData", BuoyData);
