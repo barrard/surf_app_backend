@@ -137,7 +137,7 @@ async function insertBuoyData(data) {
                 visibility,
                 pressure,
                 pressureTendency,
-                coords: { type: "Point", coordinates: [LON, LAT] },
+                // coords: { type: "Point", coordinates: [LON, LAT] },
             },
             { upsert: true, new: true, lean: true }
         );
