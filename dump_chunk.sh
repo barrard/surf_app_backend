@@ -6,8 +6,8 @@
 set -e  # Exit on error
 
 # Configuration
-DB_NAME="test"  # Update this to your actual database name
-COLLECTION="buoys"  # Update this to your actual collection name
+DB_NAME="surf_app"
+COLLECTION="buoydatas"
 DUMP_DIR="./mongo_dumps"
 DAYS_TO_DUMP=30  # Number of days of old data to dump in this chunk
 
@@ -37,14 +37,14 @@ echo ""
 
 # Get count of documents to dump
 echo "Checking how many documents will be dumped..."
-OLDEST_DATE=$(mongo $DB_NAME --quiet --eval "db.$COLLECTION.find().sort({GMT: 1}).limit(1).forEach(function(doc) { print(doc.GMT); })")
+OLDEST_DATE=$(mongo $DB_NAME --quiet --eval "var doc = db.$COLLECTION.find().sort({GMT: 1}).limit(1).toArray()[0]; if(doc) print(doc.GMT);")
 echo "Oldest record in database: $OLDEST_DATE"
 
-# Calculate the timestamp for cutoff (N days ago)
-CUTOFF_TIMESTAMP=$(date -d "$DAYS_TO_DUMP days ago" +%s)000
-echo "Cutoff timestamp: $CUTOFF_TIMESTAMP ($(date -d @$(($CUTOFF_TIMESTAMP / 1000))))"
+# Calculate the cutoff date (N days ago) as ISODate
+CUTOFF_DATE=$(date -u -d "$DAYS_TO_DUMP days ago" +%Y-%m-%dT%H:%M:%S.000Z)
+echo "Cutoff date: $CUTOFF_DATE"
 
-DOC_COUNT=$(mongo $DB_NAME --quiet --eval "db.$COLLECTION.countDocuments({GMT: {\$lt: $CUTOFF_TIMESTAMP}})")
+DOC_COUNT=$(mongo $DB_NAME --quiet --eval "db.$COLLECTION.countDocuments({GMT: {\$lt: ISODate('$CUTOFF_DATE')}})")
 echo "Documents to dump: $DOC_COUNT"
 echo ""
 
@@ -58,7 +58,7 @@ echo "Starting mongodump..."
 mongodump \
     --db=$DB_NAME \
     --collection=$COLLECTION \
-    --query="{GMT: {\$lt: $CUTOFF_TIMESTAMP}}" \
+    --query="{GMT: {\$lt: ISODate('$CUTOFF_DATE')}}" \
     --out="$CHUNK_FILE"
 
 echo ""
@@ -73,7 +73,7 @@ echo ""
 
 # Log this dump to the manifest file
 MANIFEST_FILE="${DUMP_DIR}/dump_manifest.txt"
-echo "$(basename $CHUNK_FILE)|$CUTOFF_TIMESTAMP|$DOC_COUNT|$DUMP_SIZE|$(date -u +%Y-%m-%dT%H:%M:%S)" >> "$MANIFEST_FILE"
+echo "$(basename $CHUNK_FILE)|$CUTOFF_DATE|$DOC_COUNT|$DUMP_SIZE|$(date -u +%Y-%m-%dT%H:%M:%S)" >> "$MANIFEST_FILE"
 echo "Added to manifest: $MANIFEST_FILE"
 echo ""
 
@@ -88,14 +88,14 @@ read -p "Have you copied the dump file off this server? (yes/no): " CONFIRM
 
 if [ "$CONFIRM" != "yes" ]; then
     echo "Deletion cancelled. Please copy the dump file and run the deletion manually:"
-    echo "mongo $DB_NAME --eval \"db.$COLLECTION.deleteMany({GMT: {\\\$lt: $CUTOFF_TIMESTAMP}})\""
+    echo "mongo $DB_NAME --eval \"db.$COLLECTION.deleteMany({GMT: {\\\$lt: ISODate('$CUTOFF_DATE')}})\""
     exit 0
 fi
 
 # Delete the old data
 echo ""
 echo "Deleting old data from MongoDB..."
-mongo $DB_NAME --eval "db.$COLLECTION.deleteMany({GMT: {\$lt: $CUTOFF_TIMESTAMP}})"
+mongo $DB_NAME --eval "db.$COLLECTION.deleteMany({GMT: {\$lt: ISODate('$CUTOFF_DATE')}})"
 
 echo ""
 echo "Deletion completed!"

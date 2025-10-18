@@ -6,7 +6,7 @@
 set -e  # Exit on error
 
 # Configuration
-DB_NAME="test"  # Update this to your target database name
+DB_NAME="surf_app"
 DUMP_DIR="./mongo_dumps"
 MANIFEST_FILE="${DUMP_DIR}/dump_manifest.txt"
 
@@ -89,7 +89,7 @@ echo ""
 # Show collection stats
 echo "Collection stats:"
 mongo $DB_NAME --quiet --eval "
-    var stats = db.buoys.stats();
+    var stats = db.buoydatas.stats();
     print('Total documents: ' + stats.count);
     print('Storage size: ' + (stats.storageSize / 1024 / 1024).toFixed(2) + ' MB');
     print('Index size: ' + (stats.totalIndexSize / 1024 / 1024).toFixed(2) + ' MB');
@@ -99,10 +99,10 @@ echo ""
 # Show date range
 echo "Date range in collection:"
 mongo $DB_NAME --quiet --eval "
-    var oldest = db.buoys.find().sort({GMT: 1}).limit(1).toArray()[0];
-    var newest = db.buoys.find().sort({GMT: -1}).limit(1).toArray()[0];
-    if (oldest) print('Oldest: ' + new Date(oldest.GMT));
-    if (newest) print('Newest: ' + new Date(newest.GMT));
+    var oldest = db.buoydatas.find().sort({GMT: 1}).limit(1).toArray()[0];
+    var newest = db.buoydatas.find().sort({GMT: -1}).limit(1).toArray()[0];
+    if (oldest) print('Oldest: ' + oldest.GMT);
+    if (newest) print('Newest: ' + newest.GMT);
 "
 echo ""
 echo "All done!"
