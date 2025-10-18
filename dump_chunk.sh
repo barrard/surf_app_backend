@@ -71,6 +71,12 @@ DUMP_SIZE=$(du -sh "$CHUNK_FILE" | cut -f1)
 echo "Dump size: $DUMP_SIZE"
 echo ""
 
+# Log this dump to the manifest file
+MANIFEST_FILE="${DUMP_DIR}/dump_manifest.txt"
+echo "$(basename $CHUNK_FILE)|$CUTOFF_TIMESTAMP|$DOC_COUNT|$DUMP_SIZE|$(date -u +%Y-%m-%dT%H:%M:%S)" >> "$MANIFEST_FILE"
+echo "Added to manifest: $MANIFEST_FILE"
+echo ""
+
 # Ask for confirmation before deletion
 echo "========================================"
 echo "DELETION CONFIRMATION"
