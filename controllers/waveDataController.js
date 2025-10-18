@@ -636,34 +636,32 @@ async function fetchStationData(data) {
                         allSavedData.push(cleanBuoyData);
                     })
                 );
-                const newSortedSlicedData = allSavedData
-                    .sort(
-                        (a, b) =>
-                            new Date(a.GMT).getTime() -
-                            new Date(b.GMT).getTime()
-                    )
-                    .slice(-10);
-                const mergedData = newSortedSlicedData.map((data, index) => {
-                    if (index === 0) {
-                        return data;
-                    }
-                    let prev = newSortedSlicedData[index - 1];
-                    // Start with previous data
-                    let merged = { ...prev };
-                    // Only overwrite with defined values from current data
-                    Object.keys(data).forEach((key) => {
-                        if (data[key] !== undefined && data[key] !== null) {
-                            merged[key] = data[key];
+                const sortedData = allSavedData.sort(
+                    (a, b) =>
+                        new Date(a.GMT).getTime() - new Date(b.GMT).getTime()
+                );
+
+                // Build the most recent datapoint by merging forward through all data
+                let mergedMostRecent = sortedData.reduce((merged, current) => {
+                    // Start with previous merged data
+                    const result = { ...merged };
+                    // Overwrite only with defined values from current datapoint
+                    Object.keys(current).forEach((key) => {
+                        if (current[key] !== undefined && current[key] !== null) {
+                            result[key] = current[key];
                         }
                     });
-                    // Always set GMT to current data's GMT
-                    merged.GMT = data.GMT;
-                    merged.coords = {
-                        coordinates: [LON, LAT],
-                    };
-                    return merged;
-                });
-                addToCache(mergedData);
+                    return result;
+                }, {});
+
+                // Ensure we have the latest GMT and coordinates
+                const latestDatapoint = sortedData[sortedData.length - 1];
+                mergedMostRecent.GMT = latestDatapoint.GMT;
+                mergedMostRecent.coords = {
+                    coordinates: [LON, LAT],
+                };
+
+                addToCache([mergedMostRecent]);
 
                 // }
                 console.timeEnd("got-buoys-" + stationId);
