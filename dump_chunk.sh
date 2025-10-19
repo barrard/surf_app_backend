@@ -9,7 +9,7 @@ set -e  # Exit on error
 DB_NAME="surf_app"
 COLLECTION="buoydatas"
 DUMP_DIR="./mongo_dumps"
-DAYS_TO_DUMP=30  # Number of days of old data to dump in this chunk
+DAYS_TO_DUMP=7  # Number of days of old data to dump in this chunk
 
 # Calculate date range
 END_DATE=$(date -u +%Y-%m-%dT%H:%M:%S)
