@@ -58,7 +58,7 @@ echo "Starting mongodump..."
 mongodump \
     --db=$DB_NAME \
     --collection=$COLLECTION \
-    --query="{GMT: {\$lt: ISODate('$CUTOFF_DATE')}}" \
+    --query='{"GMT": {$lt: {"$date": "'"$CUTOFF_DATE"'"}}}' \
     --out="$CHUNK_FILE"
 
 echo ""
