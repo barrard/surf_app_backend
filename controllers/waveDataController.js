@@ -116,29 +116,46 @@ async function insertBuoyData(data) {
             LON,
         } = data;
 
+        // Check if we should preserve existing swell data
+        // If existing data has swellDir but new data doesn't, keep the old swell data
+        const existingData = await BuoyModel.findOne({
+            stationId,
+            GMT,
+        }).lean();
+
+        let updateData = {
+            stationId,
+            GMT,
+            airTemp,
+            height,
+            period,
+            swellDir,
+            tide,
+            waterTemp,
+            windDir,
+            windGust,
+            windSpeed,
+            salinity,
+            visibility,
+            pressure,
+            pressureTendency,
+            // coords: { type: "Point", coordinates: [LON, LAT] },
+        };
+
+        // Preserve complete swell data if new data is incomplete
+        if (existingData && existingData.swellDir && !swellDir) {
+            // Keep the existing swell data (height, period, swellDir) instead of overwriting
+            updateData.height = existingData.height;
+            updateData.period = existingData.period;
+            updateData.swellDir = existingData.swellDir;
+        }
+
         const newBuoyData = await BuoyModel.findOneAndUpdate(
             {
                 stationId,
                 GMT,
             },
-            {
-                stationId,
-                GMT,
-                airTemp,
-                height,
-                period,
-                swellDir,
-                tide,
-                waterTemp,
-                windDir,
-                windGust,
-                windSpeed,
-                salinity,
-                visibility,
-                pressure,
-                pressureTendency,
-                // coords: { type: "Point", coordinates: [LON, LAT] },
-            },
+            updateData,
             { upsert: true, new: true, lean: true }
         );
         return newBuoyData;
