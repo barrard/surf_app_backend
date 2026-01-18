@@ -1,3 +1,4 @@
 {
-    "cSpell.words": ["obshder"]
+    "cSpell.words": ["obshder"],
+    "postman.settings.dotenv-detection-notification-visibility": false
 }

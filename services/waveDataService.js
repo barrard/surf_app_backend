@@ -1,4 +1,5 @@
 const log = require("../utils/logger.js");
+const pushService = require("./pushNotificationService.js");
 
 const cheerio = require("cheerio");
 const fs = require("fs-extra");
@@ -8,6 +9,7 @@ const rp = require("request-promise");
 module.exports = {
     getWaveData,
     fetchStation,
+    fetchStationWithNotifications,
 };
 function convertGPS(_lat, _lng) {
     let lat = parseFloat(_lat);
@@ -138,7 +140,7 @@ async function fetchStation(stationId) {
         // console.log(data);
         let { Hour, Min, DD, MM, year } = data;
         const GMT_Date = `${DD} ${switchMonth(
-            MM
+            MM,
         )} ${year} ${Hour}:${Min}:${"00"} GMT`;
         // console.log(GMT_Date);
         // console.log(new Date(GMT_Date).toLocaleString());
@@ -239,6 +241,22 @@ async function fetchStation(stationId) {
         });
         return currentConditions;
     }
+}
+
+async function fetchStationWithNotifications(stationId) {
+    const waveData = await fetchStation(stationId);
+
+    // Check for subscribers and send notifications if threshold met
+    try {
+        const result = await pushService.notifySubscribers(stationId, waveData);
+        if (result.notified > 0) {
+            log(`Sent ${result.notified} notifications for station ${stationId} (period: ${result.period}s)`);
+        }
+    } catch (error) {
+        log({ notificationError: error.message });
+    }
+
+    return waveData;
 }
 
 /* Get master list */

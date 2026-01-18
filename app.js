@@ -51,6 +51,11 @@ app.use(corsMiddleware);
 const indexRouter = require("./routes/indexRoutes");
 const usersRouter = require("./routes/usersRoutes");
 const waveDataRouter = require("./routes/waveDataRoutes");
+const deviceRouter = require("./routes/deviceRoutes");
+const pushService = require("./services/pushNotificationService");
+
+// Initialize push notification service
+pushService.initialize();
 
 app.use(loger("dev"));
 app.use(express.json());
@@ -62,5 +67,6 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 app.use("/wavedata", waveDataRouter);
+app.use("/devices", deviceRouter);
 
 module.exports = app;

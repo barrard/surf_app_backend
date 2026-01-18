@@ -58,41 +58,41 @@ setInterval(() => {
 //LA : 6 min
 // HI : 1 min
 
-setTimeout(() => {
-    trackLA();
-    setInterval(() => {
-        trackLA();
-    }, _20Min * 2);
-}, _20Min * 2); //call every 15 mins
+// setTimeout(() => {
+//     trackLA();
+//     setInterval(() => {
+//         trackLA();
+//     }, _20Min * 2);
+// }, _20Min * 2); //call every 15 mins
 
-setTimeout(() => {
-    trackFlorida();
+// setTimeout(() => {
+//     trackFlorida();
 
-    // trackHawaii();
-    setInterval(() => {
-        // trackAK();
-        trackFlorida();
-    }, _20Min + _5Min * 2);
+//     // trackHawaii();
+//     setInterval(() => {
+//         // trackAK();
+//         trackFlorida();
+//     }, _20Min + _5Min * 2);
 
-    setInterval(() => {
-        trackMassachusetts();
-    }, _20Min * 2);
-}, ZERO_Timeout); //call every 15 mins
+//     setInterval(() => {
+//         trackMassachusetts();
+//     }, _20Min * 2);
+// }, ZERO_Timeout); //call every 15 mins
 
-//wait 5 minutes and call pnw
-setTimeout(() => {
-    trackPacificNorthWest();
-    setInterval(() => {
-        trackPacificNorthWest();
-    }, _20Min + _5Min);
-    setInterval(() => {
-        trackAK();
-    }, _20Min);
-}, _20Min + _5Min);
+// //wait 5 minutes and call pnw
+// setTimeout(() => {
+//     trackPacificNorthWest();
+//     setInterval(() => {
+//         trackPacificNorthWest();
+//     }, _20Min + _5Min);
+//     setInterval(() => {
+//         trackAK();
+//     }, _20Min);
+// }, _20Min + _5Min);
 
-setInterval(() => {
-    trackHawaii();
-}, MIN_16_Timeout);
+// setInterval(() => {
+//     trackHawaii();
+// }, MIN_16_Timeout);
 
 async function insertBuoyData(data) {
     try {
@@ -156,7 +156,7 @@ async function insertBuoyData(data) {
                 GMT,
             },
             updateData,
-            { upsert: true, new: true, lean: true }
+            { upsert: true, new: true, lean: true },
         );
         return newBuoyData;
     } catch (err) {
@@ -204,7 +204,7 @@ async function findBuoysNear(args = {}) {
             },
         },
         {},
-        { lean: true }
+        { lean: true },
     );
     console.timeEnd("getBouysByDistance");
     cacheData = buoys;
@@ -224,7 +224,7 @@ function addUserHistory(req, res) {
 
         res.header(
             "Access-Control-Allow-Headers",
-            "Origin, X-Requested-With, Content-Type, Accept"
+            "Origin, X-Requested-With, Content-Type, Accept",
         );
 
         // if (!req.cookies) {
@@ -341,7 +341,7 @@ function cleanBuoyData(buoys) {
 
     for (let stationId in buoys) {
         buoys[stationId] = buoys[stationId].sort(
-            (a, b) => new Date(a.GMT).getTime() - new Date(b.GMT).getTime()
+            (a, b) => new Date(a.GMT).getTime() - new Date(b.GMT).getTime(),
         );
     }
 
@@ -493,7 +493,7 @@ async function trackAK() {
 
 async function trackLA() {
     console.log(
-        "~~~~~~~~~~~~~~    Tracking   |     LA   |     Buoys  ~~~~~~~~~~~~~~"
+        "~~~~~~~~~~~~~~    Tracking   |     LA   |     Buoys  ~~~~~~~~~~~~~~",
     );
     const { lat, lng } = LA;
     data = await waveDataService.getWaveData(lat, lng, 2);
@@ -503,7 +503,7 @@ async function trackLA() {
 
 async function trackPacificNorthWest() {
     console.log(
-        "~~~~~~~~~~~~~~   Tracking   |     PNW    |     Buoys   ~~~~~~~~~~~~~~"
+        "~~~~~~~~~~~~~~   Tracking   |     PNW    |     Buoys   ~~~~~~~~~~~~~~",
     );
     const { lat, lng } = PNW;
     data = await waveDataService.getWaveData(lat, lng, 2);
@@ -513,7 +513,7 @@ async function trackPacificNorthWest() {
 
 async function trackFlorida() {
     console.log(
-        "~~~~~~~~~~~~~~   Tracking   |     FLORIDA   |     Buoys   ~~~~~~~~~~~~~~"
+        "~~~~~~~~~~~~~~   Tracking   |     FLORIDA   |     Buoys   ~~~~~~~~~~~~~~",
     );
     const { lat, lng } = FL;
     const data = await waveDataService.getWaveData(lat, lng, 2);
@@ -523,7 +523,7 @@ async function trackFlorida() {
 }
 async function trackMassachusetts() {
     console.log(
-        "~~~~~~~~~~~~~~   Tracking   |     Massachusetts   |     Buoys   ~~~~~~~~~~~~~~"
+        "~~~~~~~~~~~~~~   Tracking   |     Massachusetts   |     Buoys   ~~~~~~~~~~~~~~",
     );
     const { lat, lng } = MA;
     const data = await waveDataService.getWaveData(lat, lng, 2);
@@ -533,7 +533,7 @@ async function trackMassachusetts() {
 }
 async function trackHawaii() {
     console.log(
-        "~~~~~~~~~~~~~~   Tracking   |     HAWAII   |     Buoys   ~~~~~~~~~~~~~~"
+        "~~~~~~~~~~~~~~   Tracking   |     HAWAII   |     Buoys   ~~~~~~~~~~~~~~",
     );
     const { lat, lng } = HAWAII;
     const data = await waveDataService.getWaveData(lat, lng, 2);
@@ -570,7 +570,7 @@ async function fetchStationData(data) {
     //get all station ids
     // console.log(data);
     const stationIds = Object.keys(data.station_id_obj).map(
-        (stationId) => stationId
+        (stationId) => stationId,
     );
 
     const cleanedData = await cleanData(data);
@@ -582,7 +582,7 @@ async function fetchStationData(data) {
     console.log(
         `Collecting ${stationCount} buoys in ${
             (stationCount * timePer) / 1000 / 60
-        } Minutes`
+        } Minutes`,
     );
     try {
         await getStationData(stationIds, stationCounter);
@@ -624,11 +624,10 @@ async function fetchStationData(data) {
             } else {
                 recentlyFetched[stationId] = true;
 
-                const stationData = await waveDataService.fetchStation(
-                    stationId
-                );
+                const stationData =
+                    await waveDataService.fetchStation(stationId);
                 console.log(
-                    `${stationCounter} Data fetched and inserted for ${stationId}`
+                    `${stationCounter} Data fetched and inserted for ${stationId}`,
                 );
 
                 console.time("got-buoys-" + stationId);
@@ -636,7 +635,7 @@ async function fetchStationData(data) {
                 // let prevData = {};
                 let stationDataPoints = 0;
                 const sortedTimes = Object.keys(stationData).sort(
-                    (a, b) => a - b
+                    (a, b) => a - b,
                 );
                 const allSavedData = [];
                 await Promise.all(
@@ -651,11 +650,11 @@ async function fetchStationData(data) {
 
                         const cleanBuoyData = await parseAndInsertData(data);
                         allSavedData.push(cleanBuoyData);
-                    })
+                    }),
                 );
                 const sortedData = allSavedData.sort(
                     (a, b) =>
-                        new Date(a.GMT).getTime() - new Date(b.GMT).getTime()
+                        new Date(a.GMT).getTime() - new Date(b.GMT).getTime(),
                 );
 
                 // Build the most recent datapoint by merging forward through all data
@@ -664,7 +663,10 @@ async function fetchStationData(data) {
                     const result = { ...merged };
                     // Overwrite only with defined values from current datapoint
                     Object.keys(current).forEach((key) => {
-                        if (current[key] !== undefined && current[key] !== null) {
+                        if (
+                            current[key] !== undefined &&
+                            current[key] !== null
+                        ) {
                             result[key] = current[key];
                         }
                     });
