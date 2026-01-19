@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const mongoose = require("mongoose");
 const db_name = process.env.DB_NAME || "surf_app";
-const db_host = process.env.DB_HOST || "localhost"; //192.168.0.243
+const db_host = process.env.DB_HOST || "127.0.0.1"; //192.168.0.243
 console.log({ db_name });
 
 mongoose

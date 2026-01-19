@@ -58,41 +58,41 @@ setInterval(() => {
 //LA : 6 min
 // HI : 1 min
 
-// setTimeout(() => {
-//     trackLA();
-//     setInterval(() => {
-//         trackLA();
-//     }, _20Min * 2);
-// }, _20Min * 2); //call every 15 mins
+setTimeout(() => {
+    trackLA();
+    setInterval(() => {
+        trackLA();
+    }, _20Min * 2);
+}, _20Min * 2); //call every 15 mins
 
-// setTimeout(() => {
-//     trackFlorida();
+setTimeout(() => {
+    trackFlorida();
 
-//     // trackHawaii();
-//     setInterval(() => {
-//         // trackAK();
-//         trackFlorida();
-//     }, _20Min + _5Min * 2);
+    // trackHawaii();
+    setInterval(() => {
+        // trackAK();
+        trackFlorida();
+    }, _20Min + _5Min * 2);
 
-//     setInterval(() => {
-//         trackMassachusetts();
-//     }, _20Min * 2);
-// }, ZERO_Timeout); //call every 15 mins
+    setInterval(() => {
+        trackMassachusetts();
+    }, _20Min * 2);
+}, ZERO_Timeout); //call every 15 mins
 
-// //wait 5 minutes and call pnw
-// setTimeout(() => {
-//     trackPacificNorthWest();
-//     setInterval(() => {
-//         trackPacificNorthWest();
-//     }, _20Min + _5Min);
-//     setInterval(() => {
-//         trackAK();
-//     }, _20Min);
-// }, _20Min + _5Min);
+//wait 5 minutes and call pnw
+setTimeout(() => {
+    trackPacificNorthWest();
+    setInterval(() => {
+        trackPacificNorthWest();
+    }, _20Min + _5Min);
+    setInterval(() => {
+        trackAK();
+    }, _20Min);
+}, _20Min + _5Min);
 
-// setInterval(() => {
-//     trackHawaii();
-// }, MIN_16_Timeout);
+setInterval(() => {
+    trackHawaii();
+}, MIN_16_Timeout);
 
 async function insertBuoyData(data) {
     try {

@@ -9,7 +9,7 @@ set -e  # Exit on error
 DB_NAME="surf_app"
 COLLECTION="buoydatas"
 DUMP_DIR="./mongo_dumps"
-DAYS_TO_DUMP=7  # Number of days of old data to dump in this chunk (starting from oldest record)
+DAYS_TO_DUMP=70  # Number of days of old data to dump in this chunk (starting from oldest record)
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 CHUNK_FILE="${DUMP_DIR}/buoy_chunk_${TIMESTAMP}"
