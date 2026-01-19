@@ -22,6 +22,8 @@
         "react"
     ],
     "rules": {
-        "camelcase":0
+        "camelcase": 0,
+        "no-tabs": "off",
+        "indent": ["error", "tab"]
     }
 }
