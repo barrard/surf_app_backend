@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
 // Subscribe to a station
 router.post('/subscribe', async (req, res) => {
 	try {
-		const { deviceToken, stationId, minPeriod = 20, notificationFrequencyHours = 1 } = req.body
+		const { deviceToken, stationId, minPeriod = 20, minSwellHeight = 0, notificationFrequencyHours = 1 } = req.body
 
 		if (!deviceToken || !stationId) {
 			return res.status(400).json({ error: 'deviceToken and stationId are required' })
@@ -58,13 +58,16 @@ router.post('/subscribe', async (req, res) => {
 		if (existingSubscription) {
 			// Update existing subscription
 			existingSubscription.minPeriod = minPeriod
+			existingSubscription.minSwellHeight = minSwellHeight
 			existingSubscription.notificationFrequencyHours = notificationFrequencyHours
 			existingSubscription.enabled = true
 		} else {
 			// Add new subscription
 			device.subscriptions.push({
 				stationId,
+				deviceToken,
 				minPeriod,
+				minSwellHeight,
 				notificationFrequencyHours,
 				enabled: true
 			})
@@ -147,20 +150,23 @@ router.put('/subscription/:subscriptionId', async (req, res) => {
 			return res.status(400).json({ error: 'deviceToken is required' })
 		}
 
-		// Prevent stationId from being modified
+		// Prevent stationId and deviceToken from being modified
 		delete updateData.stationId
+		delete updateData.deviceToken
 
-		const device = await DeviceToken.findOne({ deviceToken })
+		// Find the device that has this subscription
+		const device = await DeviceToken.findOne({ 'subscriptions._id': subscriptionId })
 
 		if (!device) {
-			return res.status(404).json({ error: 'Device not found' })
+			return res.status(404).json({ error: 'Subscription not found' })
 		}
 
 		// Find the subscription by ID
 		const subscription = device.subscriptions.id(subscriptionId)
 
-		if (!subscription) {
-			return res.status(404).json({ error: 'Subscription not found' })
+		// Verify ownership
+		if (subscription.deviceToken !== deviceToken) {
+			return res.status(403).json({ error: 'Not authorized to modify this subscription' })
 		}
 
 		// Merge existing subscription data with user update
@@ -175,6 +181,47 @@ router.put('/subscription/:subscriptionId', async (req, res) => {
 		})
 	} catch (error) {
 		log({ updateSubscriptionError: error.message })
+		res.status(500).json({ error: error.message })
+	}
+})
+
+// Delete a subscription by ID
+router.delete('/subscription/:subscriptionId', async (req, res) => {
+	try {
+		const { subscriptionId } = req.params
+		const { deviceToken } = req.body
+
+		if (!deviceToken) {
+			return res.status(400).json({ error: 'deviceToken is required' })
+		}
+
+		// Find the device that has this subscription
+		const device = await DeviceToken.findOne({ 'subscriptions._id': subscriptionId })
+
+		if (!device) {
+			return res.status(404).json({ error: 'Subscription not found' })
+		}
+
+		// Find the subscription by ID
+		const subscription = device.subscriptions.id(subscriptionId)
+
+		// Verify ownership
+		if (subscription.deviceToken !== deviceToken) {
+			return res.status(403).json({ error: 'Not authorized to delete this subscription' })
+		}
+
+		// Remove the subscription
+		device.subscriptions.pull(subscriptionId)
+		await device.save()
+
+		log(`Deleted subscription ${subscriptionId} for device ${deviceToken.slice(0, 8)}...`)
+
+		res.json({
+			success: true,
+			subscriptions: device.subscriptions
+		})
+	} catch (error) {
+		log({ deleteSubscriptionError: error.message })
 		res.status(500).json({ error: error.message })
 	}
 })

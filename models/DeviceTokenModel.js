@@ -2,7 +2,9 @@ const mongoose = require('mongoose')
 
 const subscriptionSchema = new mongoose.Schema({
 	stationId: { type: String, required: true },
-	minPeriod: { type: Number, default: 20 }, // threshold in seconds
+	deviceToken: { type: String, required: true }, // ownership verification
+	minPeriod: { type: Number }, // threshold in seconds
+	minSwellHeight: { type: Number }, // threshold in feet
 	notificationFrequencyHours: { type: Number, default: 1 }, // hours between notifications
 	enabled: { type: Boolean, default: true }
 })
