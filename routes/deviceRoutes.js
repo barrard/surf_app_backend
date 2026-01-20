@@ -137,33 +137,44 @@ router.get('/subscriptions/:deviceToken', async (req, res) => {
 	}
 })
 
-// Update a device by ID
-router.put('/:id', async (req, res) => {
+// Update a subscription by ID
+router.put('/subscription/:subscriptionId', async (req, res) => {
 	try {
-		const { id } = req.params
-		const updateData = req.body
+		const { subscriptionId } = req.params
+		const { deviceToken, ...updateData } = req.body
 
-		// Prevent subscriptions from being modified (use subscribe/unsubscribe routes instead)
-		delete updateData.subscriptions
+		if (!deviceToken) {
+			return res.status(400).json({ error: 'deviceToken is required' })
+		}
 
-		const device = await DeviceToken.findById(id)
+		// Prevent stationId from being modified
+		delete updateData.stationId
+
+		const device = await DeviceToken.findOne({ deviceToken })
 
 		if (!device) {
 			return res.status(404).json({ error: 'Device not found' })
 		}
 
-		// Merge existing data with user update
-		Object.assign(device, updateData)
+		// Find the subscription by ID
+		const subscription = device.subscriptions.id(subscriptionId)
+
+		if (!subscription) {
+			return res.status(404).json({ error: 'Subscription not found' })
+		}
+
+		// Merge existing subscription data with user update
+		Object.assign(subscription, updateData)
 		await device.save()
 
-		log(`Updated device: ${id}`)
+		log(`Updated subscription ${subscriptionId} for device ${deviceToken.slice(0, 8)}...`)
 
 		res.json({
 			success: true,
-			device
+			subscription
 		})
 	} catch (error) {
-		log({ updateDeviceError: error.message })
+		log({ updateSubscriptionError: error.message })
 		res.status(500).json({ error: error.message })
 	}
 })
