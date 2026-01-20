@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const subscriptionSchema = new mongoose.Schema({
 	stationId: { type: String, required: true },
 	minPeriod: { type: Number, default: 20 }, // threshold in seconds
-	notificationFrequency: { type: Number, default: 1 }, // hours between notifications
+	notificationFrequencyHours: { type: Number, default: 1 }, // hours between notifications
 	enabled: { type: Boolean, default: true }
 })
 

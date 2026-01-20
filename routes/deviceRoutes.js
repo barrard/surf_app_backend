@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
 // Subscribe to a station
 router.post('/subscribe', async (req, res) => {
 	try {
-		const { deviceToken, stationId, minPeriod = 20, notificationFrequency = 1 } = req.body
+		const { deviceToken, stationId, minPeriod = 20, notificationFrequencyHours = 1 } = req.body
 
 		if (!deviceToken || !stationId) {
 			return res.status(400).json({ error: 'deviceToken and stationId are required' })
@@ -58,14 +58,14 @@ router.post('/subscribe', async (req, res) => {
 		if (existingSubscription) {
 			// Update existing subscription
 			existingSubscription.minPeriod = minPeriod
-			existingSubscription.notificationFrequency = notificationFrequency
+			existingSubscription.notificationFrequencyHours = notificationFrequencyHours
 			existingSubscription.enabled = true
 		} else {
 			// Add new subscription
 			device.subscriptions.push({
 				stationId,
 				minPeriod,
-				notificationFrequency,
+				notificationFrequencyHours,
 				enabled: true
 			})
 		}

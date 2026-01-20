@@ -103,12 +103,12 @@ async function notifySubscribers(stationId, waveData) {
         );
 
         // Calculate cooldown based on subscription frequency (hours to ms)
-        const cooldownMs = (subscription.notificationFrequency || 1) * 60 * 60 * 1000;
+        const cooldownMs = (subscription.notificationFrequencyHours || 1) * 60 * 60 * 1000;
 
         // Check cooldown
         const lastNotified = device.lastNotified.get(stationId);
         if (lastNotified && now - lastNotified < cooldownMs) {
-            log(`Skipping ${device.deviceToken.slice(0, 8)}... (cooldown: ${subscription.notificationFrequency || 1}h)`);
+            log(`Skipping ${device.deviceToken.slice(0, 8)}... (cooldown: ${subscription.notificationFrequencyHours || 1}h)`);
             continue;
         }
 
