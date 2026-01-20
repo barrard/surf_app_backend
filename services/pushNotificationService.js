@@ -58,7 +58,7 @@ async function sendNotification(deviceToken, { title, body, data = {} }) {
         return { success: false, error: error.message };
     }
 }
-
+// TODO (jake) we may want to change the name waveData to weatherData or something to accomodate wind as well?
 async function notifySubscribers(stationId, waveData) {
     if (!apnProvider) {
         initialize();
@@ -78,7 +78,11 @@ async function notifySubscribers(stationId, waveData) {
     // Get swell height - check SwH (Swell Height) or WVHT (Wave Height)
     const swellHeight = parseFloat(latestReading.SwH) || parseFloat(latestReading.WVHT) || 0;
 
-    log(`Station ${stationId} period: ${period}s, swellHeight: ${swellHeight}ft`);
+    // Get wind data - check WSPD/GST or normalized fields if present... TODO: (jake) I don't remember exactly what the data looks like, so we may have to adjust this @barrard
+    const windSpeed = parseFloat(latestReading.WSPD) || parseFloat(latestReading.windSpeed) || 0;
+    const windGust = parseFloat(latestReading.GST) || parseFloat(latestReading.windGust) || 0;
+
+    log(`Station ${stationId} period: ${period}s, swellHeight: ${swellHeight}ft, windSpeed: ${windSpeed}kts, windGust: ${windGust}kts`);
 
     // Find devices subscribed to this station
     const devices = await DeviceToken.find({
@@ -103,6 +107,34 @@ async function notifySubscribers(stationId, waveData) {
         let conditionsMet = [];
         let conditionsFailed = [];
 
+        // TODO (jake) It would be nice to wring this all out and make it metric agnostic and OOP to keep it DRY and extensible for future data sources, leaving for now
+        // (Define each notification metric in a single config/rule table and run one generic evaluator over it so thresholds, alert text, and payload building are all central, then adding new conditions becomes data-only (like river levels and rain! :).)
+        const evaluateRange = ({ enabled, value, min, max, label, unit }) => {
+            if (!enabled || value == null || value <= 0) {
+                return;
+            }
+            let hasThreshold = false;
+            if (min != null) {
+                hasThreshold = true;
+                if (value >= min) {
+                    conditionsMet.push(`${label} ${value}${unit} >= ${min}${unit}`);
+                } else {
+                    conditionsFailed.push(`${label} ${value}${unit} < ${min}${unit}`);
+                }
+            }
+            if (max != null) {
+                hasThreshold = true;
+                if (value <= max) {
+                    conditionsMet.push(`${label} ${value}${unit} <= ${max}${unit}`);
+                } else {
+                    conditionsFailed.push(`${label} ${value}${unit} > ${max}${unit}`);
+                }
+            }
+            if (!hasThreshold) {
+                return;
+            }
+        };
+
         // Check period condition if enabled
         if (subscription.usePeriod) {
             if (subscription.minPeriod != null && period > 0) {
@@ -126,6 +158,23 @@ async function notifySubscribers(stationId, waveData) {
             }
             // If minSwellHeight not set but enabled, we skip this check (no threshold to evaluate)
         }
+        evaluateRange({
+            enabled: subscription.useWindSpeed,
+            value: windSpeed,
+            min: subscription.minWindSpeed,
+            max: subscription.maxWindSpeed,
+            label: 'windSpeed',
+            unit: 'kts',
+        });
+
+        evaluateRange({
+            enabled: subscription.useWindGust,
+            value: windGust,
+            min: subscription.minWindGust,
+            max: subscription.maxWindGust,
+            label: 'windGust',
+            unit: 'kts',
+        });
 
         // Skip if no conditions are enabled or if any enabled condition failed
         if (conditionsMet.length === 0 && conditionsFailed.length === 0) {
@@ -153,6 +202,12 @@ async function notifySubscribers(stationId, waveData) {
         if (subscription.useSwellHeight && subscription.minSwellHeight != null && swellHeight > 0) {
             alertParts.push(`${swellHeight}ft swell`);
         }
+        if (subscription.useWindSpeed && (subscription.minWindSpeed != null || subscription.maxWindSpeed != null) && windSpeed > 0) {
+            alertParts.push(`${windSpeed}kts wind`);
+        }
+        if (subscription.useWindGust && (subscription.minWindGust != null || subscription.maxWindGust != null) && windGust > 0) {
+            alertParts.push(`${windGust}kts gust`);
+        }
         const alertBody = alertParts.join(', ') + ' detected!';
 
         const result = await sendNotification(device.deviceToken, {
@@ -162,6 +217,8 @@ async function notifySubscribers(stationId, waveData) {
                 stationId,
                 period,
                 swellHeight,
+                windSpeed,
+                windGust,
                 timestamp: timestamps[0],
             },
         });

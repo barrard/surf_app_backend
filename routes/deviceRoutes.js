@@ -44,6 +44,12 @@ router.post('/subscribe', async (req, res) => {
 			minSwellHeight,
 			usePeriod = false,
 			useSwellHeight = false,
+			minWindSpeed, // jake was here
+			maxWindSpeed,
+			useWindSpeed = false,
+			minWindGust,
+			maxWindGust,
+			useWindGust = false,
 			notificationFrequencyHours = 1
 		} = req.body
 
@@ -69,6 +75,12 @@ router.post('/subscribe', async (req, res) => {
 			existingSubscription.minSwellHeight = minSwellHeight
 			existingSubscription.usePeriod = usePeriod
 			existingSubscription.useSwellHeight = useSwellHeight
+			existingSubscription.minWindSpeed = minWindSpeed
+			existingSubscription.maxWindSpeed = maxWindSpeed
+			existingSubscription.useWindSpeed = useWindSpeed
+			existingSubscription.minWindGust = minWindGust
+			existingSubscription.maxWindGust = maxWindGust
+			existingSubscription.useWindGust = useWindGust
 			existingSubscription.notificationFrequencyHours = notificationFrequencyHours
 			existingSubscription.enabled = true
 		} else {
@@ -80,6 +92,12 @@ router.post('/subscribe', async (req, res) => {
 				minSwellHeight,
 				usePeriod,
 				useSwellHeight,
+				minWindSpeed,
+				maxWindSpeed,
+				useWindSpeed,
+				minWindGust,
+				maxWindGust,
+				useWindGust,
 				notificationFrequencyHours,
 				enabled: true
 			})
