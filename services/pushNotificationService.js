@@ -5,8 +5,8 @@ const DeviceToken = require("../models/DeviceTokenModel.js");
 
 let apnProvider = null;
 
-// Minimum time between notifications for the same station (in ms)
-const NOTIFICATION_COOLDOWN = 60 * 60 * 1000; // 1 hour
+// Default time between notifications (in ms) - used as fallback
+const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 
 function initialize() {
     if (apnProvider) {
@@ -97,17 +97,20 @@ async function notifySubscribers(stationId, waveData) {
     let notifiedCount = 0;
 
     for (const device of devices) {
-        // Check cooldown
-        const lastNotified = device.lastNotified.get(stationId);
-        if (lastNotified && now - lastNotified < NOTIFICATION_COOLDOWN) {
-            log(`Skipping ${device.deviceToken.slice(0, 8)}... (cooldown)`);
-            continue;
-        }
-
-        // Find the subscription to get the threshold
+        // Find the subscription to get the threshold and frequency
         const subscription = device.subscriptions.find(
             (sub) => sub.stationId === stationId && sub.enabled
         );
+
+        // Calculate cooldown based on subscription frequency (hours to ms)
+        const cooldownMs = (subscription.notificationFrequency || 1) * 60 * 60 * 1000;
+
+        // Check cooldown
+        const lastNotified = device.lastNotified.get(stationId);
+        if (lastNotified && now - lastNotified < cooldownMs) {
+            log(`Skipping ${device.deviceToken.slice(0, 8)}... (cooldown: ${subscription.notificationFrequency || 1}h)`);
+            continue;
+        }
 
         const result = await sendNotification(device.deviceToken, {
             title: `Buoy ${stationId} Alert`,
