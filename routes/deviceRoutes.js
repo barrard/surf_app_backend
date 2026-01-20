@@ -137,6 +137,37 @@ router.get('/subscriptions/:deviceToken', async (req, res) => {
 	}
 })
 
+// Update a device by ID
+router.put('/:id', async (req, res) => {
+	try {
+		const { id } = req.params
+		const updateData = req.body
+
+		// Prevent subscriptions from being modified (use subscribe/unsubscribe routes instead)
+		delete updateData.subscriptions
+
+		const device = await DeviceToken.findById(id)
+
+		if (!device) {
+			return res.status(404).json({ error: 'Device not found' })
+		}
+
+		// Merge existing data with user update
+		Object.assign(device, updateData)
+		await device.save()
+
+		log(`Updated device: ${id}`)
+
+		res.json({
+			success: true,
+			device
+		})
+	} catch (error) {
+		log({ updateDeviceError: error.message })
+		res.status(500).json({ error: error.message })
+	}
+})
+
 // Test notification endpoint (useful for debugging)
 router.post('/test-notification', async (req, res) => {
 	try {
