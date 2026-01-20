@@ -5,6 +5,8 @@ const subscriptionSchema = new mongoose.Schema({
 	deviceToken: { type: String, required: true }, // ownership verification
 	minPeriod: { type: Number }, // threshold in seconds
 	minSwellHeight: { type: Number }, // threshold in feet
+	usePeriod: { type: Boolean, default: false },
+	useSwellHeight: { type: Boolean, default: false },
 	notificationFrequencyHours: { type: Number, default: 1 }, // hours between notifications
 	enabled: { type: Boolean, default: true }
 })

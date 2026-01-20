@@ -37,7 +37,15 @@ router.post('/register', async (req, res) => {
 // Subscribe to a station
 router.post('/subscribe', async (req, res) => {
 	try {
-		const { deviceToken, stationId, minPeriod = 20, minSwellHeight = 0, notificationFrequencyHours = 1 } = req.body
+		const {
+			deviceToken,
+			stationId,
+			minPeriod,
+			minSwellHeight,
+			usePeriod = false,
+			useSwellHeight = false,
+			notificationFrequencyHours = 1
+		} = req.body
 
 		if (!deviceToken || !stationId) {
 			return res.status(400).json({ error: 'deviceToken and stationId are required' })
@@ -59,6 +67,8 @@ router.post('/subscribe', async (req, res) => {
 			// Update existing subscription
 			existingSubscription.minPeriod = minPeriod
 			existingSubscription.minSwellHeight = minSwellHeight
+			existingSubscription.usePeriod = usePeriod
+			existingSubscription.useSwellHeight = useSwellHeight
 			existingSubscription.notificationFrequencyHours = notificationFrequencyHours
 			existingSubscription.enabled = true
 		} else {
@@ -68,6 +78,8 @@ router.post('/subscribe', async (req, res) => {
 				deviceToken,
 				minPeriod,
 				minSwellHeight,
+				usePeriod,
+				useSwellHeight,
 				notificationFrequencyHours,
 				enabled: true
 			})

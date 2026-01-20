@@ -75,19 +75,16 @@ async function notifySubscribers(stationId, waveData) {
     // Get period value - check DPD (Dominant Period) or SwP (Swell Period)
     const period = parseFloat(latestReading.DPD) || parseFloat(latestReading.SwP) || 0;
 
-    if (period === 0) {
-        log(`No period data for station ${stationId}`);
-        return { notified: 0 };
-    }
+    // Get swell height - check SwH (Swell Height) or WVHT (Wave Height)
+    const swellHeight = parseFloat(latestReading.SwH) || parseFloat(latestReading.WVHT) || 0;
 
-    log(`Station ${stationId} period: ${period}s`);
+    log(`Station ${stationId} period: ${period}s, swellHeight: ${swellHeight}ft`);
 
-    // Find devices subscribed to this station with period threshold met
+    // Find devices subscribed to this station
     const devices = await DeviceToken.find({
         subscriptions: {
             $elemMatch: {
                 stationId: stationId,
-                minPeriod: { $lte: period },
                 enabled: true,
             },
         },
@@ -102,6 +99,42 @@ async function notifySubscribers(stationId, waveData) {
             (sub) => sub.stationId === stationId && sub.enabled
         );
 
+        // Evaluate alert conditions based on enabled flags
+        let conditionsMet = [];
+        let conditionsFailed = [];
+
+        // Check period condition if enabled
+        if (subscription.usePeriod) {
+            if (subscription.minPeriod != null && period > 0) {
+                if (period >= subscription.minPeriod) {
+                    conditionsMet.push(`period ${period}s >= ${subscription.minPeriod}s`);
+                } else {
+                    conditionsFailed.push(`period ${period}s < ${subscription.minPeriod}s`);
+                }
+            }
+            // If minPeriod not set but enabled, we skip this check (no threshold to evaluate)
+        }
+
+        // Check swell height condition if enabled
+        if (subscription.useSwellHeight) {
+            if (subscription.minSwellHeight != null && swellHeight > 0) {
+                if (swellHeight >= subscription.minSwellHeight) {
+                    conditionsMet.push(`swellHeight ${swellHeight}ft >= ${subscription.minSwellHeight}ft`);
+                } else {
+                    conditionsFailed.push(`swellHeight ${swellHeight}ft < ${subscription.minSwellHeight}ft`);
+                }
+            }
+            // If minSwellHeight not set but enabled, we skip this check (no threshold to evaluate)
+        }
+
+        // Skip if no conditions are enabled or if any enabled condition failed
+        if (conditionsMet.length === 0 && conditionsFailed.length === 0) {
+            continue; // No conditions enabled with values
+        }
+        if (conditionsFailed.length > 0) {
+            continue; // At least one condition not met
+        }
+
         // Calculate cooldown based on subscription frequency (hours to ms)
         const cooldownMs = (subscription.notificationFrequencyHours || 1) * 60 * 60 * 1000;
 
@@ -112,12 +145,23 @@ async function notifySubscribers(stationId, waveData) {
             continue;
         }
 
+        // Build notification body
+        const alertParts = [];
+        if (subscription.usePeriod && subscription.minPeriod != null && period > 0) {
+            alertParts.push(`${period}s period`);
+        }
+        if (subscription.useSwellHeight && subscription.minSwellHeight != null && swellHeight > 0) {
+            alertParts.push(`${swellHeight}ft swell`);
+        }
+        const alertBody = alertParts.join(', ') + ' detected!';
+
         const result = await sendNotification(device.deviceToken, {
             title: `Buoy ${stationId} Alert`,
-            body: `${period}s period detected! (threshold: ${subscription.minPeriod}s)`,
+            body: alertBody,
             data: {
                 stationId,
                 period,
+                swellHeight,
                 timestamp: timestamps[0],
             },
         });
@@ -135,7 +179,7 @@ async function notifySubscribers(stationId, waveData) {
     }
 
     log(`Notified ${notifiedCount} devices for station ${stationId}`);
-    return { notified: notifiedCount, period };
+    return { notified: notifiedCount, period, swellHeight };
 }
 
 function shutdown() {
