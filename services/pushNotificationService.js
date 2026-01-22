@@ -82,8 +82,6 @@ async function notifySubscribers(stationId, waveData) {
     const windSpeed = parseFloat(latestReading.WSPD) || parseFloat(latestReading.windSpeed) || 0;
     const windGust = parseFloat(latestReading.GST) || parseFloat(latestReading.windGust) || 0;
 
-    log(`Station ${stationId} period: ${period}s, swellHeight: ${swellHeight}ft, windSpeed: ${windSpeed}kts, windGust: ${windGust}kts`);
-
     // Find devices subscribed to this station
     const devices = await DeviceToken.find({
         subscriptions: {
@@ -202,10 +200,14 @@ async function notifySubscribers(stationId, waveData) {
         if (subscription.useSwellHeight && subscription.minSwellHeight != null && swellHeight > 0) {
             alertParts.push(`${swellHeight}ft swell`);
         }
-        if (subscription.useWindSpeed && (subscription.minWindSpeed != null || subscription.maxWindSpeed != null) && windSpeed > 0) {
+        const hasWindSpeedThreshold =
+            subscription.minWindSpeed != null || subscription.maxWindSpeed != null;
+        if (subscription.useWindSpeed && hasWindSpeedThreshold && windSpeed > 0) {
             alertParts.push(`${windSpeed}kts wind`);
         }
-        if (subscription.useWindGust && (subscription.minWindGust != null || subscription.maxWindGust != null) && windGust > 0) {
+        const hasWindGustThreshold =
+            subscription.minWindGust != null || subscription.maxWindGust != null;
+        if (subscription.useWindGust && hasWindGustThreshold && windGust > 0) {
             alertParts.push(`${windGust}kts gust`);
         }
         const alertBody = alertParts.join(', ') + ' detected!';
