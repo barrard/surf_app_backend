@@ -96,144 +96,180 @@ async function notifySubscribers(stationId, waveData) {
     let notifiedCount = 0;
 
     for (const device of devices) {
-        // Find the subscription to get the threshold and frequency
-        const subscription = device.subscriptions.find(
+        const stationSubscriptions = device.subscriptions.filter(
             (sub) => sub.stationId === stationId && sub.enabled
         );
 
-        // Evaluate alert conditions based on enabled flags
-        let conditionsMet = [];
-        let conditionsFailed = [];
-
-        // TODO (jake) It would be nice to wring this all out and make it metric agnostic and OOP to keep it DRY and extensible for future data sources, leaving for now
-        // (Define each notification metric in a single config/rule table and run one generic evaluator over it so thresholds, alert text, and payload building are all central, then adding new conditions becomes data-only (like river levels and rain! :).)
-        const evaluateRange = ({ enabled, value, min, max, label, unit }) => {
-            if (!enabled || value == null || value <= 0) {
-                return;
-            }
-            let hasThreshold = false;
-            if (min != null) {
-                hasThreshold = true;
-                if (value >= min) {
-                    conditionsMet.push(`${label} ${value}${unit} >= ${min}${unit}`);
-                } else {
-                    conditionsFailed.push(`${label} ${value}${unit} < ${min}${unit}`);
-                }
-            }
-            if (max != null) {
-                hasThreshold = true;
-                if (value <= max) {
-                    conditionsMet.push(`${label} ${value}${unit} <= ${max}${unit}`);
-                } else {
-                    conditionsFailed.push(`${label} ${value}${unit} > ${max}${unit}`);
-                }
-            }
-            if (!hasThreshold) {
-                return;
-            }
-        };
-
-        // Check period condition if enabled
-        if (subscription.usePeriod) {
-            if (subscription.minPeriod != null && period > 0) {
-                if (period >= subscription.minPeriod) {
-                    conditionsMet.push(`period ${period}s >= ${subscription.minPeriod}s`);
-                } else {
-                    conditionsFailed.push(`period ${period}s < ${subscription.minPeriod}s`);
-                }
-            }
-            // If minPeriod not set but enabled, we skip this check (no threshold to evaluate)
-        }
-
-        // Check swell height condition if enabled
-        if (subscription.useSwellHeight) {
-            if (subscription.minSwellHeight != null && swellHeight > 0) {
-                if (swellHeight >= subscription.minSwellHeight) {
-                    conditionsMet.push(`swellHeight ${swellHeight}ft >= ${subscription.minSwellHeight}ft`);
-                } else {
-                    conditionsFailed.push(`swellHeight ${swellHeight}ft < ${subscription.minSwellHeight}ft`);
-                }
-            }
-            // If minSwellHeight not set but enabled, we skip this check (no threshold to evaluate)
-        }
-        evaluateRange({
-            enabled: subscription.useWindSpeed,
-            value: windSpeed,
-            min: subscription.minWindSpeed,
-            max: subscription.maxWindSpeed,
-            label: 'windSpeed',
-            unit: 'kts',
-        });
-
-        evaluateRange({
-            enabled: subscription.useWindGust,
-            value: windGust,
-            min: subscription.minWindGust,
-            max: subscription.maxWindGust,
-            label: 'windGust',
-            unit: 'kts',
-        });
-
-        // Skip if no conditions are enabled or if any enabled condition failed
-        if (conditionsMet.length === 0 && conditionsFailed.length === 0) {
-            continue; // No conditions enabled with values
-        }
-        if (conditionsFailed.length > 0) {
-            continue; // At least one condition not met
-        }
-
-        // Calculate cooldown based on subscription frequency (hours to ms)
-        const cooldownMs = (subscription.notificationFrequencyHours || 1) * 60 * 60 * 1000;
-
-        // Check cooldown
-        const lastNotified = device.lastNotified.get(stationId);
-        if (lastNotified && now - lastNotified < cooldownMs) {
-            log(`Skipping ${device.deviceToken.slice(0, 8)}... (cooldown: ${subscription.notificationFrequencyHours || 1}h)`);
+        if (!stationSubscriptions.length) {
             continue;
         }
 
-        // Build notification body
-        const alertParts = [];
-        if (subscription.usePeriod && subscription.minPeriod != null && period > 0) {
-            alertParts.push(`${period}s period`);
-        }
-        if (subscription.useSwellHeight && subscription.minSwellHeight != null && swellHeight > 0) {
-            alertParts.push(`${swellHeight}ft swell`);
-        }
-        const hasWindSpeedThreshold =
-            subscription.minWindSpeed != null || subscription.maxWindSpeed != null;
-        if (subscription.useWindSpeed && hasWindSpeedThreshold && windSpeed > 0) {
-            alertParts.push(`${windSpeed}kts wind`);
-        }
-        const hasWindGustThreshold =
-            subscription.minWindGust != null || subscription.maxWindGust != null;
-        if (subscription.useWindGust && hasWindGustThreshold && windGust > 0) {
-            alertParts.push(`${windGust}kts gust`);
-        }
-        const alertBody = alertParts.join(', ') + ' detected!';
+        let deviceModified = false;
+        let deviceRemoved = false;
 
-        const result = await sendNotification(device.deviceToken, {
-            title: `Buoy ${stationId} Alert`,
-            body: alertBody,
-            data: {
-                stationId,
-                period,
-                swellHeight,
-                windSpeed,
-                windGust,
-                timestamp: timestamps[0],
-            },
-        });
+        for (const subscription of stationSubscriptions) {
+            // Evaluate alert conditions based on enabled flags
+            let conditionsMet = [];
+            let conditionsFailed = [];
 
-        if (result.success) {
-            // Update last notified time
-            device.lastNotified.set(stationId, now);
+            // TODO (jake) It would be nice to wring this all out and make it metric agnostic and OOP to keep it DRY and extensible for future data sources, leaving for now
+            // (Define each notification metric in a single config/rule table and run one generic evaluator over it so thresholds, alert text, and payload building are all central, then adding new conditions becomes data-only (like river levels and rain! :).)
+            const evaluateRange = ({ enabled, value, min, max, label, unit }) => {
+                if (!enabled || value == null || value <= 0) {
+                    return;
+                }
+                let hasThreshold = false;
+                if (min != null) {
+                    hasThreshold = true;
+                    if (value >= min) {
+                        conditionsMet.push(`${label} ${value}${unit} >= ${min}${unit}`);
+                    } else {
+                        conditionsFailed.push(`${label} ${value}${unit} < ${min}${unit}`);
+                    }
+                }
+                if (max != null) {
+                    hasThreshold = true;
+                    if (value <= max) {
+                        conditionsMet.push(`${label} ${value}${unit} <= ${max}${unit}`);
+                    } else {
+                        conditionsFailed.push(`${label} ${value}${unit} > ${max}${unit}`);
+                    }
+                }
+                if (!hasThreshold) {
+                    return;
+                }
+            };
+
+            // Check period condition if enabled
+            if (subscription.usePeriod) {
+                if (subscription.minPeriod != null && period > 0) {
+                    if (period >= subscription.minPeriod) {
+                        conditionsMet.push(`period ${period}s >= ${subscription.minPeriod}s`);
+                    } else {
+                        conditionsFailed.push(`period ${period}s < ${subscription.minPeriod}s`);
+                    }
+                }
+                // If minPeriod not set but enabled, we skip this check (no threshold to evaluate)
+            }
+
+            // Check swell height condition if enabled
+            if (subscription.useSwellHeight) {
+                if (subscription.minSwellHeight != null && swellHeight > 0) {
+                    if (swellHeight >= subscription.minSwellHeight) {
+                        conditionsMet.push(`swellHeight ${swellHeight}ft >= ${subscription.minSwellHeight}ft`);
+                    } else {
+                        conditionsFailed.push(`swellHeight ${swellHeight}ft < ${subscription.minSwellHeight}ft`);
+                    }
+                }
+                // If minSwellHeight not set but enabled, we skip this check (no threshold to evaluate)
+            }
+            evaluateRange({
+                enabled: subscription.useWindSpeed,
+                value: windSpeed,
+                min: subscription.minWindSpeed,
+                max: subscription.maxWindSpeed,
+                label: 'windSpeed',
+                unit: 'kts',
+            });
+
+            evaluateRange({
+                enabled: subscription.useWindGust,
+                value: windGust,
+                min: subscription.minWindGust,
+                max: subscription.maxWindGust,
+                label: 'windGust',
+                unit: 'kts',
+            });
+
+            // Skip if no conditions are enabled or if any enabled condition failed
+            if (conditionsMet.length === 0 && conditionsFailed.length === 0) {
+                continue; // No conditions enabled with values
+            }
+            if (conditionsFailed.length > 0) {
+                continue; // At least one condition not met
+            }
+
+            // Calculate cooldown based on subscription frequency (hours to ms)
+            const cooldownMs = (subscription.notificationFrequencyHours || 1) * 60 * 60 * 1000;
+
+            // Check cooldown
+            const cooldownKey = (subscription._id && subscription._id.toString()) || stationId;
+            let lastNotified = null;
+            if (device.lastNotified && typeof device.lastNotified.get === 'function') {
+                lastNotified =
+                    device.lastNotified.get(cooldownKey) ||
+                    device.lastNotified.get(stationId);
+            }
+            if (lastNotified && now - lastNotified < cooldownMs) {
+                log(
+                    `Skipping ${device.deviceToken.slice(0, 8)}... subscription ${cooldownKey} (cooldown: ${
+                        subscription.notificationFrequencyHours || 1
+                    }h)`
+                );
+                continue;
+            }
+
+            // Build notification body
+            const alertParts = [];
+            if (subscription.usePeriod && subscription.minPeriod != null && period > 0) {
+                alertParts.push(`${period}s period`);
+            }
+            if (subscription.useSwellHeight && subscription.minSwellHeight != null && swellHeight > 0) {
+                alertParts.push(`${swellHeight}ft swell`);
+            }
+            const hasWindSpeedThreshold =
+                subscription.minWindSpeed != null || subscription.maxWindSpeed != null;
+            if (subscription.useWindSpeed && hasWindSpeedThreshold && windSpeed > 0) {
+                alertParts.push(`${windSpeed}kts wind`);
+            }
+            const hasWindGustThreshold =
+                subscription.minWindGust != null || subscription.maxWindGust != null;
+            if (subscription.useWindGust && hasWindGustThreshold && windGust > 0) {
+                alertParts.push(`${windGust}kts gust`);
+            }
+            const alertBody = alertParts.join(', ') + ' detected!';
+
+            const result = await sendNotification(device.deviceToken, {
+                title: `Buoy ${stationId} Alert`,
+                body: alertBody,
+                data: {
+                    stationId,
+                    subscriptionId: subscription._id?.toString(),
+                    period,
+                    swellHeight,
+                    windSpeed,
+                    windGust,
+                    timestamp: timestamps[0],
+                },
+            });
+
+            if (result.success) {
+                // Update last notified time for this specific subscription
+                if (!device.lastNotified || typeof device.lastNotified.set !== 'function') {
+                    const entries = device.lastNotified ? Object.entries(device.lastNotified) : [];
+                    device.lastNotified = new Map(entries);
+                }
+                device.lastNotified.set(cooldownKey, now);
+                if (cooldownKey !== stationId && device.lastNotified.has(stationId)) {
+                    device.lastNotified.delete(stationId);
+                }
+                deviceModified = true;
+                notifiedCount++;
+            } else if (result.error?.reason === "BadDeviceToken") {
+                // Remove invalid device tokens
+                log(`Removing invalid device token: ${device.deviceToken.slice(0, 8)}...`);
+                await DeviceToken.deleteOne({ _id: device._id });
+                deviceRemoved = true;
+                break;
+            }
+        }
+
+        if (deviceRemoved) {
+            continue;
+        }
+
+        if (deviceModified) {
             await device.save();
-            notifiedCount++;
-        } else if (result.error?.reason === "BadDeviceToken") {
-            // Remove invalid device tokens
-            log(`Removing invalid device token: ${device.deviceToken.slice(0, 8)}...`);
-            await DeviceToken.deleteOne({ _id: device._id });
         }
     }
 

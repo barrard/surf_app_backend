@@ -40,6 +40,7 @@ router.post('/subscribe', async (req, res) => {
 		const {
 			deviceToken,
 			stationId,
+			subscriptionId,
 			minPeriod,
 			minSwellHeight,
 			usePeriod = false,
@@ -64,47 +65,47 @@ router.post('/subscribe', async (req, res) => {
 			device = await DeviceToken.create({ deviceToken, subscriptions: [] })
 		}
 
-		// Check if already subscribed to this station
-		const existingSubscription = device.subscriptions.find(
-			(sub) => sub.stationId === stationId
-		)
+		let subscriptionToUpdate = null
+		if (subscriptionId) {
+			subscriptionToUpdate = device.subscriptions.id(subscriptionId)
 
-		if (existingSubscription) {
-			// Update existing subscription
-			existingSubscription.minPeriod = minPeriod
-			existingSubscription.minSwellHeight = minSwellHeight
-			existingSubscription.usePeriod = usePeriod
-			existingSubscription.useSwellHeight = useSwellHeight
-			existingSubscription.minWindSpeed = minWindSpeed
-			existingSubscription.maxWindSpeed = maxWindSpeed
-			existingSubscription.useWindSpeed = useWindSpeed
-			existingSubscription.minWindGust = minWindGust
-			existingSubscription.maxWindGust = maxWindGust
-			existingSubscription.useWindGust = useWindGust
-			existingSubscription.notificationFrequencyHours = notificationFrequencyHours
-			existingSubscription.enabled = true
+			if (!subscriptionToUpdate) {
+				return res.status(404).json({ error: 'Subscription not found' })
+			}
+
+			if (subscriptionToUpdate.deviceToken !== deviceToken) {
+				return res
+					.status(403)
+					.json({ error: 'Not authorized to modify this subscription' })
+			}
+		}
+
+		const subscriptionData = {
+			stationId,
+			deviceToken,
+			minPeriod,
+			minSwellHeight,
+			usePeriod,
+			useSwellHeight,
+			minWindSpeed,
+			maxWindSpeed,
+			useWindSpeed,
+			minWindGust,
+			maxWindGust,
+			useWindGust,
+			notificationFrequencyHours,
+			enabled: true
+		}
+
+		if (subscriptionToUpdate) {
+			Object.assign(subscriptionToUpdate, subscriptionData)
 		} else {
-			// Add new subscription
-			device.subscriptions.push({
-				stationId,
-				deviceToken,
-				minPeriod,
-				minSwellHeight,
-				usePeriod,
-				useSwellHeight,
-				minWindSpeed,
-				maxWindSpeed,
-				useWindSpeed,
-				minWindGust,
-				maxWindGust,
-				useWindGust,
-				notificationFrequencyHours,
-				enabled: true
-			})
+			device.subscriptions.push(subscriptionData)
 		}
 
 		await device.save()
-		log(`Device ${deviceToken.slice(0, 8)}... subscribed to station ${stationId}`)
+		const action = subscriptionToUpdate ? 'updated subscription on' : 'subscribed to'
+		log(`Device ${deviceToken.slice(0, 8)}... ${action} station ${stationId}`)
 
 		res.json({
 			success: true,
@@ -131,10 +132,22 @@ router.delete('/unsubscribe', async (req, res) => {
 			return res.status(404).json({ error: 'Device not found' })
 		}
 
-		// Remove the subscription
-		device.subscriptions = device.subscriptions.filter(
-			(sub) => sub.stationId !== stationId
+		const removedSubscriptions = device.subscriptions.filter(
+			(sub) => sub.stationId === stationId
 		)
+
+		// Remove the subscription(s)
+		device.subscriptions = device.subscriptions.filter((sub) => sub.stationId !== stationId)
+
+		if (removedSubscriptions.length && device.lastNotified && typeof device.lastNotified.delete === 'function') {
+			// Remove cooldown entries tied to these subscriptions (by ID and by legacy station key)
+			for (const sub of removedSubscriptions) {
+				if (sub._id) {
+					device.lastNotified.delete(sub._id.toString())
+				}
+			}
+			device.lastNotified.delete(stationId)
+		}
 
 		await device.save()
 		log(`Device ${deviceToken.slice(0, 8)}... unsubscribed from station ${stationId}`)
@@ -242,6 +255,14 @@ router.delete('/subscription/:subscriptionId', async (req, res) => {
 
 		// Remove the subscription
 		device.subscriptions.pull(subscriptionId)
+
+		if (device.lastNotified && typeof device.lastNotified.delete === 'function') {
+			device.lastNotified.delete(subscriptionId)
+			if (subscription.stationId) {
+				device.lastNotified.delete(subscription.stationId)
+			}
+		}
+
 		await device.save()
 
 		log(`Deleted subscription ${subscriptionId} for device ${deviceToken.slice(0, 8)}...`)
