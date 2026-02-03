@@ -40,7 +40,6 @@ router.post('/subscribe', async (req, res) => {
 		const {
 			deviceToken,
 			stationId,
-			subscriptionId,
 			minPeriod,
 			minSwellHeight,
 			usePeriod = false,
@@ -65,21 +64,6 @@ router.post('/subscribe', async (req, res) => {
 			device = await DeviceToken.create({ deviceToken, subscriptions: [] })
 		}
 
-		let subscriptionToUpdate = null
-		if (subscriptionId) {
-			subscriptionToUpdate = device.subscriptions.id(subscriptionId)
-
-			if (!subscriptionToUpdate) {
-				return res.status(404).json({ error: 'Subscription not found' })
-			}
-
-			if (subscriptionToUpdate.deviceToken !== deviceToken) {
-				return res
-					.status(403)
-					.json({ error: 'Not authorized to modify this subscription' })
-			}
-		}
-
 		const subscriptionData = {
 			stationId,
 			deviceToken,
@@ -97,15 +81,10 @@ router.post('/subscribe', async (req, res) => {
 			enabled: true
 		}
 
-		if (subscriptionToUpdate) {
-			Object.assign(subscriptionToUpdate, subscriptionData)
-		} else {
-			device.subscriptions.push(subscriptionData)
-		}
+		device.subscriptions.push(subscriptionData)
 
 		await device.save()
-		const action = subscriptionToUpdate ? 'updated subscription on' : 'subscribed to'
-		log(`Device ${deviceToken.slice(0, 8)}... ${action} station ${stationId}`)
+		log(`Device ${deviceToken.slice(0, 8)}... subscribed to station ${stationId}`)
 
 		res.json({
 			success: true,
